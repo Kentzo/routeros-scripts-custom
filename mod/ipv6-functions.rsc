@@ -1,3 +1,4 @@
+#!rsc by RouterOS
 # Wait for an IPv6 address with prefix $2 to appear on $1 marked by the comment regex $3.
 :global WaitIP6Address do={
     :local varAddress

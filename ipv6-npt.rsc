@@ -1,3 +1,4 @@
+#!rsc by RouterOS
 # argLoopbackInt: name of the loopback interface
 # argWanPool: name of the WAN pool 
 # argUlaPool: name of the ULA pool

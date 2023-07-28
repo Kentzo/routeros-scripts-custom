@@ -1,3 +1,4 @@
+#!rsc by RouterOS
 # Usage:
 #
 # - $parseIP6Address ip6 [prefix length] [detail=yes]

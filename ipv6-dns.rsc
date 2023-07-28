@@ -1,3 +1,4 @@
+#!rsc by RouterOS
 # Usage:
 #
 # argWanPool: name of the WAN pool 
