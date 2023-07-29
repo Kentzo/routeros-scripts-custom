@@ -1,4 +1,9 @@
 #!rsc by RouterOS
+#
+# Requirements:
+#   - mod/ipv6-functions
+#   - mod/ipv6-structured
+#
 # Usage:
 #
 # argWanPool: name of the WAN pool 

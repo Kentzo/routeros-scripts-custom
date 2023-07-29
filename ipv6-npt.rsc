@@ -1,8 +1,13 @@
 #!rsc by RouterOS
+#
+# Requirements:
+#   - mod/ipv6-functions
+#
 # argLoopbackInt: name of the loopback interface
 # argWanPool: name of the WAN pool 
 # argUlaPool: name of the ULA pool
 # argManagedID: regex-escaped unique ID of the managed objects
+#
 
 :global argLoopbackInt
 :global argWanPool
