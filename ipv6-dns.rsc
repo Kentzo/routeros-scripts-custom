@@ -53,6 +53,6 @@
         :log info "Add $varName -> $varAddr dns, expires after $varWanPrefixTTL"
         add name=$varName address=$varAddr type=AAAA ttl=$varWanPrefixTTL comment="Managed: DNSv6 / $argManagedID"
     } on-error={
-        $LogPrintExit2 error "No prefix from $varWanPrefix on $varInt" true
+        $LogPrintExit2 error $0 ("No prefix from $varWanPrefix on $varInt") true
     }
 }

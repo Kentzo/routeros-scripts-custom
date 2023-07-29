@@ -44,7 +44,7 @@
         :set varGuaPrefix [$WaitIP6Address $argLoopbackInt $varWanPrefix $argManagedID]
     } on-error={
         remove [find comment~"$argManagedID\$"]
-        $LogPrintExit2 error "Unable to allocate prefix from $varWanPrefix on $argLoopbackInt" true
+        $LogPrintExit2 error $0 ("Unable to allocate prefix from $varWanPrefix on $argLoopbackInt") true
     }
 
     :log info "Add $varGuaPrefix <-> $varUlaPrefix"
