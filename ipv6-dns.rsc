@@ -22,7 +22,7 @@
 :while ($GlobalFunctionsReady != true) do={ :delay 500ms; }
 
 :global WaitIP6Address
-:global ParseIP6Address
+:global StructureIP6Address
 :global LogPrintExit2
 
 /ipv6/pool
@@ -40,7 +40,7 @@
     :local varName ($varHost->2)
 
     :do {
-        :local varPrefix ([$ParseIP6Address [$WaitIP6Address $varInt $varWanPrefix ""]]->"prefix")
+        :local varPrefix ([$StructureIP6Address [$WaitIP6Address $varInt $varWanPrefix ""]]->"prefix")
         :local varAddr ($varPrefix | $varIID)
 
         /ipv6/firewall/address-list

@@ -27,7 +27,7 @@
 :do {
     /ipv6/address
     :local varOldGuaPrefix [get value-name=address [find comment~"$argManagedID\$"]]
-    :local varNewGuaPrefix [$WaitIP6Address $argLoopbackInt $varWanPrefix $argManagedID]
+    :local varNewGuaPrefix [$WaitIP6Address $argLoopbackInt $varWanPrefix "$argManagedID\$"]
 
     :if ($varOldGuaPrefix != $varNewGuaPrefix) do={
         :log info "Set $varNewGuaPrefix <-> $varUlaPrefix"
@@ -41,7 +41,7 @@
     add interface=$argLoopbackInt advertise=no from-pool=$argWanPool comment="Managed: NPTv6 / $argManagedID"
     :local varGuaPrefix
     :do {
-        :set varGuaPrefix [$WaitIP6Address $argLoopbackInt $varWanPrefix $argManagedID]
+        :set varGuaPrefix [$WaitIP6Address $argLoopbackInt $varWanPrefix "$argManagedID\$"]
     } on-error={
         remove [find comment~"$argManagedID\$"]
         $LogPrintExit2 error $0 ("Unable to allocate prefix from $varWanPrefix on $argLoopbackInt") true

@@ -1,63 +1,12 @@
 #!rsc by RouterOS
-# Usage:
-#
-# - $parseIP6Address ip6 [prefix length] [detail=yes]
-# - $parseIP6Address ip6-prefix [detail=yes]
-#
-# Returns:
-#
-# - address (ip6): IPv6 address of the input
-#   addressPrefix (ip6-prefix): IPv6 address-prefix of the input
-#   prefix (ip6): Prefix of the input
-#   prefixLength (num): Prefix length of the input
-#
-# If invoked with detail=yes, then the "detail" key will also be set to one of:
-#
-# - type (str): "unspecified"
-#   fields (array): Address as an array of 8 integers
-#
-# - type (str): "loopback"
-#   fields (array): Address as an array of 8 integers
-#
-# - type (str): "link-local"
-#   fields (array): Address as an array of 8 integers
-#
-# - type (str): "ip4-mapped"
-#   fields (array): Address as an array of 8 integers
-#   ip4 (ip): Embedded IPv4 address
-#
-# - type (str): "ip4-compatible"
-#   fields (array): Address as an array of 8 integers
-#   ip4 (ip): Embedded IPv4 address
-#
-# - type (str): "multicast"
-#   fields (array): Address as an array of 8 integers
-#   flags (num): Multicast flags
-#   groupID (num): Multicast group ID
-#
-# - type (str): "multicast"
-#   fields (array): Address as an array of 8 integers
-#   flags (num): Multicast flags
-#   subnetPrefix (ip6): Unicast base
-#   subnetPrefixLength (num): Length of the unicast base
-#   groupID (num): Multicast group ID
-#   [RIID] (ip): address of the embedded multicast rendezvous point; optional
-#   SSM (bool): Whether multicast address is source-specific
-#
-# - type (str): "unicast"
-#   subtype (str): "ula" if Unique Local IPv6 Unicast; otherwise "gua"
-#   fields (array): Address as an array of 8 integers
-#   globalID (ip6): Site identifier
-#   subnetID (ip6): Subnet identifier within site
-#   interfaceID (ip6): Interface identifier on a link
-#
 
-# Return IPv6 prefix mask of given length.
+# Make an IPv6 prefix mask of a given length.
 #
 # $1 (integer): prefix length
 #
 # > :put [$MakeIP6PrefixMask 64]
 # ffff:ffff:ffff:ffff::
+#
 :global MakeIP6PrefixMask do={
     :if (($1 < 0) or ($1 > 128)) do={ :error "$1 is invalid IPv6 mask length" }
 
@@ -95,12 +44,13 @@
     :return [:toip6 $varMask]
 }
 
-# Return IPv6 suffix mask of given length.
+# Make an IPv6 suffix mask of a given length.
 #
 # $1 (integer): prefix length
 #
 # > :put [$MakeIP6PrefixMask 64]
 # ::ffff:ffff:ffff:ffff
+#
 :global MakeIP6SuffixMask do={
     :global MakeIP6PrefixMask
 
@@ -108,14 +58,15 @@
     :return (~[$MakeIP6PrefixMask (128 - $1)])
 }
 
-# Return given IPv6 address as an array of eight 16bit integers,
+# Make an array of eight 16bit integers that represent IPv6 address,
 # one integer per field.
 #
 # $1 (ip6, str): IPv6 address
 #
-# > :put [$MakeIP6AddressFields 2001:db8::1]
+# > :put [$MakeIP6FieldsFromAddress 2001:db8::1]
 # 8193;3512;0;0;0;0;0;1
-:global MakeIP6AddressFields do={
+#
+:global MakeIP6FieldsFromAddress do={
     :local varAddr [:tostr $1]
     :local varAddrLen [:len $varAddr]
 
@@ -170,98 +121,98 @@
     :return [$funcParseFields $varAddr]
 }
 
-# Return given input as an ip6 object.
+# Make an IPv6 address from an array of eight 16bit integers.
 #
-# $1 (array): IPv6 address as an array of fields
+# $1 (array): IPv6 address fields
+#
+# > :put [$MakeIP6FieldsFromAddress ({8193;3512;0;0;0;0;0;1})]
+# 2001:db8::1
+#
+:global MakeIP6AddressFromFields do={
+    :local varHexMap [:toarray "0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F"]
+    :local varDigitMask {0xf000 ; 0x0f00 ; 0x00f0 ; 0x000f}
+    :local varAddr ""
+
+    :for fieldIdx from=0 to=7 do={
+        :local varFieldNum ($1->$fieldIdx)
+
+        :if ($varFieldNum != 0) do={
+            :for digitIdx from=0 to=3 do={
+                :local varDigitNum (($varFieldNum & ($varDigitMask->$digitIdx)) >> (12 - $digitIdx * 4))
+                :local varDigit ($varHexMap->$varDigitNum)
+                :set varAddr ($varAddr . $varDigit)
+            }
+        } else={
+            :set varAddr ($varAddr . "0")
+        }
+
+        :if ($fieldIdx != 7) do={ :set varAddr ($varAddr . ":") }
+    }
+
+    :return [:toip6 $varAddr]
+}
+
+# Make an IPv6 address from a MAC via the EUI-64 method.
 #
 # $1 (ip6, str): IPv6 prefix
 # $2 (str): MAC
 #
-# $1 (ip6, str): IPv6 address
+# > :put [$MakeIP6AddressFromEUI64 2001:db8:: "00:00:5E:00:53:01"]
+# 2001:db8::200:5eff:fe00:5301
 #
-# > :put [$MakeIP6Address ({8193;3512;0;0;0;0;0;1})]
-# 2001:db8::1
-#
-# > :put [$MakeIP6Address fe80:: "00:00:5E:00:53:01"]
-# fe80::200:5eff:fe00:5301
-#
-# > :put [$MakeIP6Address "2001:db8::1"]
-# 2001:db8::1
-:global MakeIP6Address do={
-    :if ([:typeof $1] = "array") do={
-        :local varHexMap [:toarray "0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F"]
-        :local varDigitMask {0xf000 ; 0x0f00 ; 0x00f0 ; 0x000f}
-        :local varAddr ""
-
-        :for fieldIdx from=0 to=7 do={
-            :local varFieldNum ($1->$fieldIdx)
-
-            :if ($varFieldNum != 0) do={
-                :for digitIdx from=0 to=3 do={
-                    :local varDigitNum (($varFieldNum & ($varDigitMask->$digitIdx)) >> (12 - $digitIdx * 4))
-                    :local varDigit ($varHexMap->$varDigitNum)
-                    :set varAddr ($varAddr . $varDigit)
-                }
-            } else={
-                :set varAddr ($varAddr . "0")
-            }
-
-            :if ($fieldIdx != 7) do={ :set varAddr ($varAddr . ":") }
-        }
-
-        :return [:toip6 $varAddr]
-    }
-
+:global MakeIP6AddressFromEUI64 do={
     :local argAddr [:toip6 $1]
     :if ([:typeof $argAddr] != "ip6") do={ :error "\"$1\" is invalid IPv6 address"}
 
-    :if (([:typeof $2] = "str") and ([:len $2] = 17)) do={
-        :local varPrefixFields [$MakeIP6AddressFields $1]
-        :put "$varPrefixFields"
-        :local varMACFields {\
-            [:tonum "0x$[:pick $2 0 2]"] ;\
-            [:tonum "0x$[:pick $2 3 5]"] ;\
-            [:tonum "0x$[:pick $2 6 8]"] ;\
-            [:tonum "0x$[:pick $2 9 11]"] ;\
-            [:tonum "0x$[:pick $2 12 14]"] ;\
-            [:tonum "0x$[:pick $2 15 17]"]\
-        }
-        :put "$varMACFields"
-        :local varEUI64Fields {\
-            (((($varMACFields->0) << 8) | ($varMACFields->1)) ^ 0x0200) ;\
-            ((($varMACFields->2) << 8) | 0x00ff) ;\
-            (0xfe00 | ($varMACFields->3)) ;\
-            ((($varMACFields->4) << 8) | ($varMACFields->5))\
-        }
-        :put "$varMACFields"
-        :local varAddrFields {\
-            ($varPrefixFields->0) ;\
-            ($varPrefixFields->1) ;\
-            ($varPrefixFields->2) ;\
-            ($varPrefixFields->3) ;\
-            ($varEUI64Fields->0) ;\
-            ($varEUI64Fields->1) ;\
-            ($varEUI64Fields->2) ;\
-            ($varEUI64Fields->3)\
-        }
-        :put "$varAddrFields"
-        :put "$[:len $varAddrFields]"
-        :return [$MakeIP6Address $varAddrFields]
-    }
+    :local argMAC $2
+    :if (!([:typeof $argMAC] = "str") or !([:len $argMAC] = 17)) do={ :error "\"$2\" is invalid MAC" }
 
-    :return $argAddr
+    :local varPrefixFields [$MakeIP6FieldsFromAddress $1]
+    :local varMACFields {\
+        [:tonum "0x$[:pick $argMAC 0 2]"] ;\
+        [:tonum "0x$[:pick $argMAC 3 5]"] ;\
+        [:tonum "0x$[:pick $argMAC 6 8]"] ;\
+        [:tonum "0x$[:pick $argMAC 9 11]"] ;\
+        [:tonum "0x$[:pick $argMAC 12 14]"] ;\
+        [:tonum "0x$[:pick $argMAC 15 17]"]\
+    }
+    :local varEUI64Fields {\
+        (((($varMACFields->0) << 8) | ($varMACFields->1)) ^ 0x0200) ;\
+        ((($varMACFields->2) << 8) | 0x00ff) ;\
+        (0xfe00 | ($varMACFields->3)) ;\
+        ((($varMACFields->4) << 8) | ($varMACFields->5))\
+    }
+    :local varAddrFields {\
+        ($varPrefixFields->0) ;\
+        ($varPrefixFields->1) ;\
+        ($varPrefixFields->2) ;\
+        ($varPrefixFields->3) ;\
+        ($varEUI64Fields->0) ;\
+        ($varEUI64Fields->1) ;\
+        ($varEUI64Fields->2) ;\
+        ($varEUI64Fields->3)\
+    }
+    :return [$MakeIP6AddressFromFields $varAddrFields]
 }
 
-# Return general attributes of an IPv6 address.
 #
-# $1 (ip6, str): IPv6 address
-# [$2] (integer): subnet prefix length; defaults to 128
+# Make a structure of common IPv6 atributes.
+#
+# - $1 (ip6, str): IPv6 address
+#   [$2] (integer): subnet prefix length; defaults to 128
 # 
-# $1 (str, ip6-prefix): IPv6 address-prefix
+# - $1 (str, ip6-prefix): IPv6 address-prefix
 #
-# > :put [$ParseIP6AddressCommon 2001:db8::1/64]
+# Returns:
+#  address (ip6): IPv6 address of the input
+#  addressPrefix (ip6-prefix): IPv6 address-prefix of the input
+#  prefix (ip6): Prefix of the input
+#  prefixLength (integer): Prefix length of the input
+#
+# > :put [$StructureIP6AddressCommon 2001:db8::1/64]
 # address=2001:db8::1;addressPrefix=2001:db8::/64;prefix=2001:db8::;prefixLength=64
-:global ParseIP6AddressCommon do={
+#
+:global StructureIP6AddressCommon do={
     :global MakeIP6PrefixMask
 
     :local varRawAddr [:toip6 $1]
@@ -305,20 +256,60 @@
     :return {"address"=$varAddr ; "addressPrefix"=$varAddrPrefix ; "prefix"=$varPrefix ; "prefixLength"=$varPrefixLen}
 }
 
-# Return detailed attributes of an IPv6 address with respect to its type.
+# Make a structure of type-specific IPv6 atributes.
 #
-# $1 (array): An array of common IPv6 attributes
+# $1 (array): A structure of common IPv6 attributes
 #
-# > :put [$ParseIP6AddressDetail [$ParseIP6AddressCommon 2001:db8::1/64]]
+# Returns:
+# - type (str): "unspecified"
+#   fields (array): Address as an array of 8 integers
+#
+# - type (str): "loopback"
+#   fields (array): Address as an array of 8 integers
+#
+# - type (str): "link-local"
+#   fields (array): Address as an array of 8 integers
+#
+# - type (str): "ip4-mapped"
+#   fields (array): Address as an array of 8 integers
+#   ip4 (ip): Embedded IPv4 address
+#
+# - type (str): "ip4-compatible"
+#   fields (array): Address as an array of 8 integers
+#   ip4 (ip): Embedded IPv4 address
+#
+# - type (str): "multicast"
+#   fields (array): Address as an array of 8 integers
+#   flags (integer): Multicast flags
+#   groupID (integer): Multicast group ID
+#
+# - type (str): "multicast"
+#   fields (array): Address as an array of 8 integers
+#   flags (integer): Multicast flags
+#   subnetPrefix (ip6): Unicast base
+#   subnetPrefixLength (integer): Length of the unicast base
+#   groupID (integer): Multicast group ID
+#   [RIID] (ip): address of the embedded multicast rendezvous point; optional
+#   SSM (bool): Whether multicast address is source-specific
+#
+# - type (str): "unicast"
+#   subtype (str): "ula" if Unique Local IPv6 Unicast; otherwise "gua"
+#   fields (array): Address as an array of 8 integers
+#   globalID (ip6): Site identifier
+#   subnetID (ip6): Subnet identifier within site
+#   interfaceID (ip6): Interface identifier on a link
+#
+# > :put [$StructureIP6AddressDetail [$StructureIP6AddressCommon 2001:db8::1/64]]
 # fields=8193;3512;0;0;0;0;0;1;globalID=2001:db8::;interfaceID=::1;subnetID=::;subtype=gua;type=unicast
-:global ParseIP6AddressDetail do={
-    :global MakeIP6AddressFields
+#
+:global StructureIP6AddressDetail do={
+    :global MakeIP6FieldsFromAddress
     :global MakeIP6PrefixMask
     :global MakeIP6SuffixMask
-    :global MakeIP6Address
+    :global MakeIP6AddressFromFields
 
     :local argAddr ($1->"address")
-    :local varFields [$MakeIP6AddressFields $argAddr]
+    :local varFields [$MakeIP6FieldsFromAddress $argAddr]
 
     :if ($argAddr = ::) do={ :return {"type"="unspecified" ; "fields"=$varFields} }
     :if ($argAddr = ::1) do={ :return {"type"="loopback" ; "fields"=$varFields} }
@@ -352,7 +343,7 @@
             :local varPrefixLen (($varFields->1) & 0x00ff)
             :local varPrefixFields {($varFields->2) ; ($varFields->3) ; ($varFields->4) ; ($varFields->5) ; 0 ; 0 ; 0; 0 }
             :local varPrefixMask [$MakeIP6PrefixMask $varPrefixLen]
-            :local varPrefix ([$MakeIP6Address $varPrefixFields] & $varPrefixMask)
+            :local varPrefix ([$MakeIP6AddressFromFields $varPrefixFields] & $varPrefixMask)
             :local varGroupID (($varFields->6 << 16) | $varFields->7)
             :set varDetail ($varDetail , {"subnetPrefix"=$varPrefix ; "subnetPrefixLength"=$varPrefixLen ; "groupID"=$varGroupID})
 
@@ -360,7 +351,7 @@
                 # 0111 - RFC3956
                 :local varRIIDRaw ((($varFields->1) & 0x0f00) >> 8)
                 :local varRIIDFields {0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0 ; $varRIIDRaw}
-                :local varRIID ($varPrefix | [$MakeIP6Address $varRIIDFields])
+                :local varRIID ($varPrefix | [$MakeIP6AddressFromFields $varRIIDFields])
                 :set varDetail ($varDetail , {"RIID"=$varRIID})
             }
 
@@ -386,10 +377,10 @@
         :set subtype "ula"
 
         :local globalIDFields {(($varFields->0) & 0x00ff) ; ($varFields->1) ; ($varFields->2) ; 0 ; 0 ; 0 ; 0 ; 0}
-        :set globalID [$MakeIP6Address $globalIDFields]
+        :set globalID [$MakeIP6AddressFromFields $globalIDFields]
 
         :local subnetIDFields {0 ; 0 ; 0 ; ($varFields->3) ; 0 ; 0 ; 0 ; 0}
-        :set subnetID [$MakeIP6Address $subnetIDFields]
+        :set subnetID [$MakeIP6AddressFromFields $subnetIDFields]
     } else={
         #RFC3587
         :set subtype "gua"
@@ -406,16 +397,24 @@
     :return {"type"="unicast" ; "subtype"=$subtype ; "fields"=$varFields ; "globalID"=$globalID ; "subnetID"=$subnetID ; "interfaceID"=$interfaceID}
 }
 
-# See usage
-:global ParseIP6Address do={
-    :global ParseIP6AddressCommon
-    :global ParseIP6AddressDetail
+# Make a structure from an IPv6 address.
+#
+# - $1 (ip6, str): IPv6 address
+#   $2 (integer): Prefix length
+#   [detail] (bool): Whether to include details; defaults to false
+#
+# - $1 (ip6-prefix, str): IPv6 address-prefix
+#   [detail] (bool): Whether to include details; defaults to false
+#
+:global StructureIP6Address do={
+    :global StructureIP6AddressCommon
+    :global StructureIP6AddressDetail
 
-    :local varCommon [$ParseIP6AddressCommon $1 $2]
+    :local varCommon [$StructureIP6AddressCommon $1 $2]
 
     :if ([:typeof $detail] != "nothing") do={
         :if ([[:parse "[:tobool $detail]"]]) do={
-            :local varDetail [$ParseIP6AddressDetail $varCommon]
+            :local varDetail [$StructureIP6AddressDetail $varCommon]
             :set varCommon ($varCommon , {"detail"=$varDetail})
         } 
     }
