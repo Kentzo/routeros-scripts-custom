@@ -195,7 +195,78 @@
     :return [$MakeIP6AddressFromFields $varAddrFields]
 }
 
+# Make an IPv6 address by translating prefix of $1 from $2 to $3.
 #
+# $1 (ip6, str):
+# $2 (ip6-prefix, str):
+# $3 (ip6-prefix, str):
+#
+# > $MakeIP6AddressFromNPT fd01:203:405:1::1234 fd01:203:405::/48 2001:db8:1::/48
+# 2001:db8:1:d550::1234
+# > $MakeIP6AddressFromNPT 2001:db8:1:d550::1234 2001:db8:1::/48 fd01:203:405::/48
+# fd01:203:405:1::1234
+#
+:global MakeIP6AddressFromNPT do={
+    :global MakeIP6AddressFromFields
+    :global StructureIP6Address
+
+    :local varAddr [$StructureIP6Address $1 detail=yes]
+    :if (!(($varAddr->"address") in $2)) do={ :error "$2 is invalid, must include $1" }
+    :local varAddrFields ($varAddr->"detail"->"fields")
+
+    :local varSrcPrefix [$StructureIP6Address $2]
+    :local varPrefixLen ($varSrcPrefix->"prefixLength")
+    :set varSrcPrefix [$StructureIP6Address ($varSrcPrefix->"prefix") detail=yes]
+    :local varSrcFields ($varSrcPrefix->"detail"->"fields")
+
+    :local varDstPrefix [$StructureIP6Address $3]
+    :if ($varPrefixLen < ($varDstPrefix->"prefixLength")) do={ :set varPrefixLen ($varDstPrefix->"prefixLength") }
+    :set varDstPrefix [$StructureIP6Address ($varDstPrefix->"prefix") detail=yes]
+    :local varDstFields ($varDstPrefix->"detail"->"fields")
+
+    :local MakeOneComplement do={ :return ($1 ^ 0xffff) }
+    :local FitOneComplement do={ :return (($1 & 0xffff) + ($1 >> 16)) }
+    :local MakeChecksum do={ :return (($1->0) + ($1->1) + ($1->2) + ($1->3) + ($1->4) + ($1->5) + ($1->6) + ($1->7)) }
+
+    :local varSrcChecksum [$MakeOneComplement [$FitOneComplement [$MakeChecksum $varSrcFields]]]
+    :local varDstChecksum [$MakeOneComplement [$FitOneComplement [$MakeChecksum $varDstFields]]]
+    :local varAdjustment [$FitOneComplement ($varDstChecksum + [$MakeOneComplement $varSrcChecksum])]
+
+    :local varNPTAddrFields ($varDstPrefix->"address" | (($varAddr->"address") & [$MakeIP6SuffixMask (128 - $varPrefixLen)]))
+    :set varNPTAddrFields ([$StructureIP6Address $varNPTAddrFields detail=yes]->"detail"->"fields")
+
+    :local varAdjustedNPTAddrFields
+    :if ($varPrefixLen <= 48) do={
+        :set varAdjustedNPTAddrFields ({\
+            ($varNPTAddrFields->0) ;\
+            ($varNPTAddrFields->1) ;\
+            ($varNPTAddrFields->2) ;\
+            [$FitOneComplement (($varNPTAddrFields->3) + $varAdjustment)] ;\
+            ($varNPTAddrFields->4) ;\
+            ($varNPTAddrFields->5) ;\
+            ($varNPTAddrFields->6) ;\
+            ($varNPTAddrFields->7)\
+        })
+    } else={
+        :local varAdjustmentFieldIdx ((($varPrefixLen - 1) / 16) + 1)
+        :while (($varNPTAddrFields->$varAdjustmentFieldIdx) = 0xffff) do={
+            :set varAdjustmentFieldIdx ($varAdjustmentFieldIdx + 1)
+        }
+        :if ($varAdjustmentFieldIdx = 8) do={ :error "cannot find field to apply adjustment" }
+
+        :set varAdjustedNPTAddrFields ({})
+        :for fieldIdx from=0 to=7 do={
+            :if ($fieldIdx = $varAdjustmentFieldIdx) do={
+                :set varAdjustedNPTAddrFields ($varAdjustedNPTAddrFields , [$FitOneComplement (($varNPTAddrFields->$fieldIdx) + $varAdjustment)])
+            } else={
+                :set varAdjustedNPTAddrFields ($varAdjustedNPTAddrFields , $varNPTAddrFields->$fieldIdx)
+            }
+        }
+    }
+
+    :return [$MakeIP6AddressFromFields $varAdjustedNPTAddrFields]
+}
+
 # Make a structure of common IPv6 atributes.
 #
 # - $1 (ip6, str): IPv6 address
