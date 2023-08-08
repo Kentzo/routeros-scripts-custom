@@ -45,8 +45,8 @@
 # > $SetIfExistsElseAdd /ipv6/firewall/raw ({"comment~\"blocklist\""}) ({chain="prerouting";action="drop";comment="\"blocklist\""})
 #
 :global SetIfExistsElseAdd do={
-    :local varExisting [$RunCommandFromArray ("$1/find") $2]
-    :if ([:len $varExisting]) do={
+    :local varExisting ([$RunCommandFromArray ("$1/find") $2]->0)
+    :if ($varExisting) do={
         $RunCommandFromArray ("$1/set") ($3 , {numbers=$varExisting})
     } else={
         $RunCommandFromArray ("$1/add") $3
