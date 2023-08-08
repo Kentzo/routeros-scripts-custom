@@ -20,16 +20,16 @@
     :local varCommand [:tostr $1]
     :foreach k,v in=$2 do={
         :if ([:typeof $k] = "num") do={
-            :set varCommand ($varCommand . " $v")
+            :set varCommand ($varCommand . " $[:tostr $v]")
         } else={
-            :set varCommand ($varCommand . " $k=$v")
+            :set varCommand ($varCommand . " $k=$[:tostr $v]")
         }
     }
     :local varResult
     :do {
         $LogPrintExit2 debug $0 ("> $varCommand") false
         :set varResult [[:parse $varCommand]]
-        $LogPrintExit2 debug $0 ("  $varResult") false
+        $LogPrintExit2 debug $0 ("  $[:tostr $varResult]") false
     } on-error={
         $LogPrintExit2 error $0 ("`$varCommand` failed") true
     }
