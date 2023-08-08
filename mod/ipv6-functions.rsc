@@ -1,8 +1,5 @@
 #!rsc by RouterOS
 
-:global GlobalFunctionsReady;
-:while ($GlobalFunctionsReady != true) do={ :delay 500ms; }
-
 # Run command with arguments specified as an array.
 #
 # $1 (str): Full command name to run
