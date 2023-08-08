@@ -38,10 +38,10 @@
 
 # Update objects in place if they already exist; otherwise add them.
 #
-# $1 (str): Full path where find, add and set command will be run
+# $1 (str): Full path where find, add and set commands will be run
 # $2 (array): Search criteria
 # $3 (array): Add/set properties
-#:pare
+#
 # > $SetIfExistsElseAdd /ipv6/firewall/raw ({"comment~\"blocklist\""}) ({chain="prerouting";action="drop";comment="\"blocklist\""})
 #
 :global SetIfExistsElseAdd do={
