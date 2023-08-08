@@ -53,6 +53,38 @@
     }
 }
 
+# Same as SetIfExistsElseAdd but objects are only updated if they fail equality check.
+#
+# This is useful to avoid side effects of set, such as address re-allocation
+# when setting /ipv6/address. It's costlier to run, avoid unless necessary.
+#
+# $1 (str): Full path where print, add and set commands will be run
+# $2 (array): Search criteria
+# $3 (array): Equality criteria, compared against `print as-value`
+# $4 (array): Add/set properties
+#
+:global SetIfExistsElseAddUnlessEqual do={
+    :local varExisting ([$RunCommandFromArray ("$1/print as-value where") $2]->0)
+    :if ($varExisting) do={
+        :foreach k,v in=$3 do={
+            :if ([:typeof $k] = "num") do={
+                $LogPrintExit2 error $0 ("equality criteria cannot have non-key elements") true
+            }
+            :local left ($varExisting->$k)
+            :local right $v
+            :if ($left != $right) do={
+                $LogPrintExit2 debug $0 ("\"$k\": $left != $right") false
+                $RunCommandFromArray ("$1/set") ($4 , {numbers=($varExisting->".id")})
+
+                :local varNil
+                :return $varNil
+            }
+        }
+    } else={
+        $RunCommandFromArray ("$1/add") $4
+    }
+}
+
 # Wait for an /ipv6/address record with prefix $2 to appear on interface $1,
 # optionally matched by the comment regex $3.
 #

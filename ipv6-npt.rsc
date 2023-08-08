@@ -52,9 +52,15 @@
 
     :global WaitIP6Address
     :global SetIfExistsElseAdd
+    :global SetIfExistsElseAddUnlessEqual
 
-    $SetIfExistsElseAdd /ipv6/address\
+    $SetIfExistsElseAddUnlessEqual /ipv6/address\
         ({"comment~\"$argManagedID\\\$\""})\
+        ({\
+            interface="$argLoopbackInt";\
+            advertise=false;\
+            "from-pool"="$argWanPool"\
+        })\
         ({\
             interface=$argLoopbackInt;\
             advertise="no";\
