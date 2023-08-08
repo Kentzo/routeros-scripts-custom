@@ -457,7 +457,10 @@
         :set subtype "gua"
 
         :local globalIDLen ($1->"prefixLength")
-        :set globalID ($1->"prefix")
+        :if ($globalIDLen > 64) do={
+            :set globalIDLen 64
+        }
+        :set globalID (($1->"prefix") & [$MakeIP6PrefixMask $globalIDLen])
 
         :local subnetIDLen (64 - $globalIDLen)
         :if ($subnetIDLen > 0) do={
