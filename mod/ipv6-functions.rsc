@@ -66,7 +66,7 @@
     :global LogPrintExit2
     :global RunCommandFromArray
 
-    :local varExisting ([$RunCommandFromArray ("$1/print as-value where") $2]->0)
+    :local varExisting ([$RunCommandFromArray ("$1/print") ({"as-value" ; "where"} , $2)]->0)
     :if ($varExisting) do={
         :foreach k,v in=$3 do={
             :if ([:typeof $k] = "num") do={
