@@ -97,17 +97,18 @@
 # > $WaitIP6Address loopback 2001:db8::/48
 #
 :global WaitIP6Address do={
-    :local varAddress
     /ipv6/address {
         :retry command={
-            :return [get value-name=address ([find interface=$1 (address in $2) comment~"$3"]->0)]
+            :local varAddress [get value-name=address ([find interface=$1 (address in $2) comment~"$3"]->0)]
+            $LogPrintExit2 $0 debug ("$varAddress from $2 is available on $1") false
+            :return $varAddress
+        } on-error={
+            :local varWrongAddresses
+            :foreach varAddress in=[print as-value proplist=address where interface=$1 comment~"$3"] do={
+                :set varWrongAddresses ($varWrongAddresses . " $($varAddress->address)")
+            }
+            $LogPrintExit2 $0 error ("expected an address from $2 on $1, got ($varWrongAddresses) instead") true
         } delay=1 max=5
-
-        :set varWrongAddresses ""
-        :foreach varAddress in=[print as-value proplist=address where interface=$1 comment~"$3"] do={
-            :set varWrongAddresses ($varWrongAddresses . " $($varAddress->address)")
-        }
-        $LogPrintExit2 $0 error ("expected an address from $2 on $1, got ($varWrongAddresses) instead") true
     }
 }
 
