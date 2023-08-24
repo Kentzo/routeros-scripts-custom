@@ -6,7 +6,7 @@
 # $2 (array): An array of command arguments
 #
 # Array of arguments may contain key-values which will be added as $key=$value
-# or just values that will be added as is. Order of addition follows enumeration.
+# or just values that will be added as is. Order of arguments follows array enumeration.
 #
 # > $RunCommandFromArray /ipv6/firewall/raw/print ({"detail", "where", "src-address-list"="blacklist"})
 # /ipv6/firewall/raw/print detail where src-address-list=blacklist
