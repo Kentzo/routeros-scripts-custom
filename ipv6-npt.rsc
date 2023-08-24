@@ -137,6 +137,7 @@ $AssertNotEmpty "argManagedID" $argManagedID
 
 :do {
     $SetupRules $varUlaPrefix $varWanPrefix
+    LogPrintExit2 info $0 ("Add NPT: $varUlaPrefix <-> $varWanPrefix") false
 } on-error={
     $LogPrintExit2 warning $0 ("Failed to update NPTv6, retrying from scratch") false
     :do {
