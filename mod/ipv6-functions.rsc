@@ -100,10 +100,15 @@
     :local varAddress
     /ipv6/address {
         :retry command={
-            :set varAddress [get value-name=address [find interface=$1 (address in $2) comment~"$3"]]
+            :return [get value-name=address ([find interface=$1 (address in $2) comment~"$3"]->0)]
         } delay=1 max=5
+
+        :set varWrongAddresses ""
+        :foreach varAddress in=[print as-value proplist=address where interface=$1 comment~"$3"] do={
+            :set varWrongAddresses ($varWrongAddresses . " $($varAddress->address)")
+        }
+        $LogPrintExit2 $0 error ("expected an address from $2 on $1, got ($varWrongAddresses) instead") true
     }
-    :return $varAddress
 }
 
 # Assert that a given variable named $1 has non-empty value $2
