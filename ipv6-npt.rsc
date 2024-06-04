@@ -117,7 +117,7 @@
     /ipv6/firewall/raw/remove [find comment~"$argManagedID\$"]
 }
 
-:global LogPrintExit2
+:global LogPrint
 :global AssertNotEmpty
 
 :global argLoopbackInt
@@ -137,14 +137,15 @@ $AssertNotEmpty "argManagedID" $argManagedID
 
 :do {
     $SetupRules $varUlaPrefix $varWanPrefix
-    $LogPrintExit2 info $0 ("Add NPT: $varUlaPrefix <-> $varWanPrefix") false
+    $LogPrint info $0 ("Add NPT: $varUlaPrefix <-> $varWanPrefix")
 } on-error={
-    $LogPrintExit2 warning $0 ("Failed to update NPTv6, retrying from scratch") false
+    $LogPrint warning $0 ("Failed to update NPTv6, retrying from scratch")
     :do {
         $TearDown
         $SetupRules $varUlaPrefix $varWanPrefix
     } on-error={
         $TearDown
-        $LogPrintExit2 error $0 ("Failed to set up NPTv6") true
+        $LogPrint error $0 ("Failed to set up NPTv6")
+        :error "fatal error in ipv6-npt.rsc"
     }
 }

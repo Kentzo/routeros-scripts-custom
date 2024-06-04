@@ -12,7 +12,7 @@
 # /ipv6/firewall/raw/print detail where src-address-list=blacklist
 #
 :global RunCommandFromArray do={
-    :global LogPrintExit2
+    :global LogPrint
 
     :local varCommand [:tostr $1]
     :foreach k,v in=$2 do={
@@ -24,11 +24,12 @@
     }
     :local varResult
     :do {
-        $LogPrintExit2 debug $0 ("> $varCommand") false
+        $LogPrint debug $0 ("> $varCommand")
         :set varResult [[:parse $varCommand]]
-        $LogPrintExit2 debug $0 ("  $[:tostr $varResult]") false
+        $LogPrint debug $0 ("  $[:tostr $varResult]")
     } on-error={
-        $LogPrintExit2 error $0 ("`$varCommand` failed") true
+        $LogPrint error $0 ("`$varCommand` failed")
+        :error "fatal error in ipv6-functions.rsc/RunCommandFromArray"
     }
     :return $varResult
 }
@@ -63,19 +64,20 @@
 # $4 (array): Add/set properties
 #
 :global SetIfExistsElseAddUnlessEqual do={
-    :global LogPrintExit2
+    :global LogPrint
     :global RunCommandFromArray
 
     :local varExisting ([$RunCommandFromArray ("$1/print") ({"as-value" ; "where"} , $2)]->0)
     :if ($varExisting) do={
         :foreach k,v in=$3 do={
             :if ([:typeof $k] = "num") do={
-                $LogPrintExit2 error $0 ("equality criteria cannot have non-key elements") true
+                $LogPrint error $0 ("equality criteria cannot have non-key elements")
+                :error "fatal error in ipv6-functions.rsc/SetIfExistsElseAddUnlessEqual"
             }
             :local left ($varExisting->$k)
             :local right $v
             :if ($left != $right) do={
-                $LogPrintExit2 debug $0 ("\"$k\": $left != $right") false
+                $LogPrint debug $0 ("\"$k\": $left != $right")
                 $RunCommandFromArray ("$1/set") ($4 , {numbers=($varExisting->".id")})
 
                 :local varNil
@@ -100,14 +102,15 @@
     /ipv6/address {
         :retry command={
             :local varAddress [get value-name=address ([find interface=$1 (address in $2) comment~"$3"]->0)]
-            $LogPrintExit2 $0 debug ("$varAddress from $2 is available on $1") false
+            $LogPrint $0 debug ("$varAddress from $2 is available on $1")
             :return $varAddress
         } on-error={
             :local varWrongAddresses
             :foreach varAddress in=[print as-value proplist=address where interface=$1 comment~"$3"] do={
                 :set varWrongAddresses ($varWrongAddresses . " $($varAddress->address)")
             }
-            $LogPrintExit2 $0 error ("expected an address from $2 on $1, got ($varWrongAddresses) instead") true
+            $LogPrint $0 error ("expected an address from $2 on $1, got ($varWrongAddresses) instead")
+            :error "fatal error in ipv6-functions.rsc/WaitIP6Address"
         } delay=1 max=5
     }
 }
@@ -119,9 +122,10 @@
 # > $AssertNotEmpty argLoopbackInt $argLoopbackInt
 #
 :global AssertNotEmpty do={
-    :global LogPrintExit2
+    :global LogPrint
 
     :if ([:len $2] = 0) do={
-        $LogPrintExit2 $0 error ("$1 cannot be empty") true
+        $LogPrint $0 error ("$1 cannot be empty")
+        :error "fatal error in ipv6-functions.rsc/AssertNotEmpty"
     }
 }

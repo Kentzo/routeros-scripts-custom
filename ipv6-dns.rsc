@@ -23,7 +23,7 @@
 
 :global WaitIP6Address
 :global StructureIP6Address
-:global LogPrintExit2
+:global LogPrint
 
 /ipv6/pool
 :local varWanPrefix [get value-name=prefix $argWanPool]
@@ -53,6 +53,7 @@
         :log info "Add $varName -> $varAddr dns, expires after $varWanPrefixTTL"
         add name=$varName address=$varAddr type=AAAA ttl=$varWanPrefixTTL comment="Managed: DNSv6 / $argManagedID"
     } on-error={
-        $LogPrintExit2 error $0 ("No prefix from $varWanPrefix on $varInt") true
+        $LogPrint error $0 ("No prefix from $varWanPrefix on $varInt")
+        :error "fatal error in ipv6-dns.rsc"
     }
 }
