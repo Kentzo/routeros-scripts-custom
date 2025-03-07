@@ -495,3 +495,33 @@
 
     :return $varCommon
 }
+
+# Make an RFC1886 domain from an IPv6 address.
+#
+# $1 (ip6, str): IPv6 address
+#
+# > :put [$MakeIP6Domain 2001:db8::1]
+# 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa.
+#
+:global MakeIP6Domain do={
+    :global MakeIP6FieldsFromAddress
+
+    :local varFields [$MakeIP6FieldsFromAddress $1]
+    :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" : "f"}
+    :local varNibbleMask {0x000f ; 0x00f0 ; 0x0f00 ; 0xf000}
+    :local varAddr ""
+
+    :for fieldIdx from=7 to=0 step=-1 do={
+        :local varFieldNum ($varFields->$fieldIdx)
+
+        :for nibbleIdx from=0 to=3 do={
+            :local varNibbleNum (($varFieldNum & ($varNibbleMask->$nibbleIdx)) >> ($nibbleIdx * 4))
+            :local varNibble ($varHexMap->$varNibbleNum)
+            :set varAddr ($varAddr . "$varNibble.")
+        }
+    }
+
+    :set varAddr ($varAddr . "ip6.arpa.")
+
+    :return $varAddr
+}
