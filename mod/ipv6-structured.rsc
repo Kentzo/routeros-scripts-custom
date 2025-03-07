@@ -129,18 +129,18 @@
 # 2001:db8::1
 #
 :global MakeIP6AddressFromFields do={
-    :local varHexMap [:toarray "0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F"]
-    :local varDigitMask {0xf000 ; 0x0f00 ; 0x00f0 ; 0x000f}
+    :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" : "f"}
+    :local varNibbleMask {0x000f ; 0x00f0 ; 0x0f00 ; 0xf000}
     :local varAddr ""
 
     :for fieldIdx from=0 to=7 do={
         :local varFieldNum ($1->$fieldIdx)
 
         :if ($varFieldNum != 0) do={
-            :for digitIdx from=0 to=3 do={
-                :local varDigitNum (($varFieldNum & ($varDigitMask->$digitIdx)) >> (12 - $digitIdx * 4))
-                :local varDigit ($varHexMap->$varDigitNum)
-                :set varAddr ($varAddr . $varDigit)
+            :for nibbleIdx from=3 to=0 step=-1 do={
+                :local varNibbleNum (($varFieldNum & ($varNibbleMask->$nibbleIdx)) >> ($nibbleIdx * 4))
+                :local varNibble ($varHexMap->$varNibbleNum)
+                :set varAddr ($varAddr . $varNibble)
             }
         } else={
             :set varAddr ($varAddr . "0")
