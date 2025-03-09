@@ -48,7 +48,7 @@
 #
 # $1 (integer): prefix length
 #
-# > :put [$MakeIP6PrefixMask 64]
+# > :put [$MakeIP6SuffixMask 64]
 # ::ffff:ffff:ffff:ffff
 #
 :global MakeIP6SuffixMask do={
@@ -125,7 +125,7 @@
 #
 # $1 (array): IPv6 address fields
 #
-# > :put [$MakeIP6FieldsFromAddress ({8193;3512;0;0;0;0;0;1})]
+# > :put [$MakeIP6AddressFromFields ({8193;3512;0;0;0;0;0;1})]
 # 2001:db8::1
 #
 :global MakeIP6AddressFromFields do={

@@ -1,5 +1,5 @@
 #!rsc by RouterOS
-#
+
 # Set up NPTv6.
 #
 # GUA prefix is reserved by allocating a network from $argWanPool
