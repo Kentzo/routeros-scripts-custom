@@ -504,24 +504,44 @@
 # 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa.
 #
 :global MakeIP6Domain do={
+    :global MakeIP6NetworkDomain
+    :local varNetwork "$1/128"
+    :return [$MakeIP6NetworkDomain $varNetwork]
+}
+
+# Make an RFC1886 domain from an IPv6 network.
+#
+# $1 (ip6-prefix, str): IPv6 address
+#
+# > :put [$MakeIP6NetworkDomain 2001:db8::1/32]
+# 8.b.d.0.1.0.0.2.ip6.arpa
+#
+:global MakeIP6NetworkDomain do={
+    :global MakeIP6PrefixMask
     :global MakeIP6FieldsFromAddress
 
-    :local varFields [$MakeIP6FieldsFromAddress $1]
+    :local argNetwork [:tostr $1]
+    :local varDelimIdx [:find $1 "/" -1]
+
+    :local varAddr [:toip6 [:pick $argNetwork -1 $varDelimIdx]]
+    :if ([:typeof $varAddr] != "ip6") do={ :error "\"$1\" is invalid IPv6 network"}
+
+    :local varNetworkLen [:tonum [:pick $argNetwork ($varDelimIdx + 1) [:len $argNetwork]]]
+    :if (($varNetworkLen < 0) or ($varNetworkLen > 128) or ($varNetworkLen % 4) != 0) do={ :error "$1 is invalid IPv6 network" }
+
+    :set varAddr ($varAddr & [$MakeIP6PrefixMask $varNetworkLen])
+    :local varFields [$MakeIP6FieldsFromAddress $varAddr]
     :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" : "f"}
-    :local varNibbleMask {0x000f ; 0x00f0 ; 0x0f00 ; 0xf000}
-    :local varAddr ""
+    :local varNibbleMask {0xf000 ; 0x0f00 ; 0x00f0 ; 0x000f}
+    :local varDomain "ip6.arpa"
 
-    :for fieldIdx from=7 to=0 step=-1 do={
-        :local varFieldNum ($varFields->$fieldIdx)
-
-        :for nibbleIdx from=0 to=3 do={
-            :local varNibbleNum (($varFieldNum & ($varNibbleMask->$nibbleIdx)) >> ($nibbleIdx * 4))
-            :local varNibble ($varHexMap->$varNibbleNum)
-            :set varAddr ($varAddr . "$varNibble.")
-        }
+    :for nibbleIdx from=0 to=($varNetworkLen / 4 - 1) step=1 do={
+        :local fieldIdx ($nibbleIdx / 4)
+        :local fieldNibbleIdx ($nibbleIdx % 4)
+        :local varNibbleNum (($varFields->$fieldIdx) & ($varNibbleMask->$fieldNibbleIdx) >> (12 -$fieldNibbleIdx * 4)) 
+        :local varNibble ($varHexMap->$varNibbleNum)
+        :set varDomain ("$varNibble." . $varDomain)
     }
 
-    :set varAddr ($varAddr . "ip6.arpa.")
-
-    :return $varAddr
+    :return $varDomain
 }
