@@ -26,7 +26,7 @@
             :set varMask ($varMask . ":")
         }
 
-        :for i from=1 to=4 do={
+        :for i from=1 to=4 step=1 do={
             :if ($varRemBits >= 4) do={
                 :set varMask ($varMask . "f")
                 :set varRemBits ($varRemBits - 4)
@@ -94,7 +94,7 @@
     :if ($varDelimIdx = 0) do={
         :local varFieldsTail [$funcParseFields [:pick $varAddr 2 $varAddrLen]]
         :local varFieldsHead ({})
-        :for i from=0 to=(7 - [:len varFieldsTail]) do={ :set varFieldsHead ($varFieldsHead , 0) }
+        :for i from=0 to=(7 - [:len varFieldsTail]) step=1 do={ :set varFieldsHead ($varFieldsHead , 0) }
         :return ($varFieldsHead , $varFieldsTail)
     }
 
@@ -102,7 +102,7 @@
     :if ($varDelimIdx = ($varAddrLen - 2)) do={
         :local varFieldsHead [$funcParseFields [:pick $varAddr 0 $varDelimIdx]]
         :local varFieldsTail ({})
-        :for i from=0 to=(7 - [:len varFieldsTail]) do={ :set varFieldsTail ($varFieldsTail , 0) }
+        :for i from=0 to=(7 - [:len varFieldsTail]) step=1 do={ :set varFieldsTail ($varFieldsTail , 0) }
         :return ($varFieldsHead , $varFieldsTail)
     }
 
@@ -113,7 +113,7 @@
         :local varFieldsHead [$funcParseFields [:pick $varAddr 0 $varDelimIdx]]
         :local varFieldsTail [$funcParseFields [:pick $varAddr ($varDelimIdx + 2) $varAddrLen]]
         :local varFieldsMid ({})
-        :for i from=0 to=(7 - [:len $varFieldsHead] - [:len $varFieldsTail]) do={ :set varFieldsMid ($varFieldsMid , 0) }
+        :for i from=0 to=(7 - [:len $varFieldsHead] - [:len $varFieldsTail]) step=1 do={ :set varFieldsMid ($varFieldsMid , 0) }
         :return ($varFieldsHead , $varFieldsMid , $varFieldsTail)
     }
 
@@ -133,7 +133,7 @@
     :local varNibbleMask {0x000f ; 0x00f0 ; 0x0f00 ; 0xf000}
     :local varAddr ""
 
-    :for fieldIdx from=0 to=7 do={
+    :for fieldIdx from=0 to=7 step=1 do={
         :local varFieldNum ($1->$fieldIdx)
 
         :if ($varFieldNum != 0) do={
@@ -255,7 +255,7 @@
         :if ($varAdjustmentFieldIdx = 8) do={ :error "cannot find field to apply adjustment" }
 
         :set varAdjustedNPTAddrFields ({})
-        :for fieldIdx from=0 to=7 do={
+        :for fieldIdx from=0 to=7 step=1 do={
             :if ($fieldIdx = $varAdjustmentFieldIdx) do={
                 :set varAdjustedNPTAddrFields ($varAdjustedNPTAddrFields , [$FitOneComplement (($varNPTAddrFields->$fieldIdx) + $varAdjustment)])
             } else={
