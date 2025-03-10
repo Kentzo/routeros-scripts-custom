@@ -84,11 +84,14 @@
 # Make an RFC1034 / RFC2317 domain from an IPv4 network.
 #
 # $1 (ip-prefix, str): IPv4 address
+# [rfc2317] (bool): Whether to follow RFC2317 recommendation for networks on non-octet boundaries
 #
-# > :put [$MakeIPNetworkDomain 192.0.2.0/25]
-# 0/25.2.0.192.in-addr.arpa.
 # > :put [$MakeIPNetworkDomain 192.0.2.0/24]
 # 2.0.192.in-addr.arpa.
+# > :put [$MakeIPNetworkDomain 192.0.2.0/25]
+# 2.0.192.in-addr.arpa.
+# > :put [$MakeIPNetworkDomain 192.0.2.0/25 rfc2317=yes]
+# 0/25.2.0.192.in-addr.arpa.
 #
 :global MakeIPNetworkDomain do={
     :global MakeIPPrefixMask
@@ -111,8 +114,10 @@
         :set varDomain "$($varFields->$fieldIdx).$varDomain"
     }
 
-    :if (($varNetworkLen % 8) != 0) do={
-        :set varDomain "$($varFields->($varNetworkLen / 8))/$varNetworkLen.$varDomain"
+    :if ((($varNetworkLen % 8) != 0) and ([:typeof $rfc2317] != "nothing")) do={
+        :if ([[:parse "[:tobool $rfc2317]"]]) do={
+            :set varDomain "$($varFields->($varNetworkLen / 8))/$varNetworkLen.$varDomain"
+        }
     }
 
     :return $varDomain
