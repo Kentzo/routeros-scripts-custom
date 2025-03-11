@@ -568,3 +568,37 @@
 
     :return $varDomain
 }
+# Deduplicate and coalesce IPv6 networks.
+#
+# $1 (array): An array of IPv6 networks
+#
+# > :put [$DeduplicateIP6Networks ({2001:db8:0:1110::/60;2001:db8:0:2220::/60;2001:db8:0:2221::/64;2001:db8:0:1110::/60})]
+# 2001:db8:0:1110::/60;2001:db8:0:2220::/60
+#
+:global DeduplicateIP6Networks do={
+    :local varCoalescedIdx ({})
+
+    :for i from=0 to=([:len $1] - 1) step=1 do={
+        :local j ($i + 1)
+        :while ($j < [:len $1] and $varCoalescedIdx->"$i" != true) do={
+            :if ($1->$j in $1->$i) do={
+                :set ($varCoalescedIdx->"$j") true
+            } else={
+                :if ($1->$i in $1->$j) do={
+                    :set ($varCoalescedIdx->"$i") true
+                }
+            }
+
+            :set j ($j + 1)
+        }
+    }
+
+    :local varNetworks ({})
+    :for i from=0 to=([:len $1] - 1) step=1 do={
+        :if ($varCoalescedIdx->"$i" != true) do={
+            :set varNetworks ($varNetworks , $1->$i)
+        }
+    }
+
+    :return $varNetworks
+}
