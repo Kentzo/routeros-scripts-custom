@@ -115,7 +115,8 @@
     }
 }
 
-# Assert that a given variable named $1 has non-empty value $2
+# Assert that a given variable named $1 has non-empty value $2.
+#
 # $1 (str): Name of the variable for logging
 # $2: Value for checking
 #

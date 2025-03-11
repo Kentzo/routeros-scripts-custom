@@ -548,8 +548,6 @@
     :global StructureIP6Network
 
     :local argNetwork [$StructureIP6Network $1]
-
-    :local argNetwork [:tostr $1]
     :local varAddr ($argNetwork->"address")
     :local varNetworkLen ($argNetwork->"length")
 
@@ -568,6 +566,7 @@
 
     :return $varDomain
 }
+
 # Deduplicate and coalesce IPv6 networks.
 #
 # $1 (array): An array of IPv6 networks
