@@ -496,6 +496,32 @@
     :return $varCommon
 }
 
+# Structure an IPv6 network.
+#
+# $1 (ip6-prefix, str): IPv6 network
+#
+# > :put [$StructureIP6Network 2001:db8::1/64]
+# address=2001:db8::;length=64;mask=ffff:ffff:ffff:ffff::
+#
+:global StructureIP6Network do={
+    :global MakeIP6PrefixMask
+
+    :local argNetwork [:tostr $1]
+    :local varDelimIdx [:find $1 "/" -1]
+
+    :local varAddr [:toip6 [:pick $argNetwork -1 $varDelimIdx]]
+    :if ([:typeof $varAddr] != "ip6") do={ :error "\"$1\" is invalid IPv6 network"}
+
+    :local varNetworkLen [:tonum [:pick $argNetwork ($varDelimIdx + 1) [:len $argNetwork]]]
+    :if (($varNetworkLen < 0) or ($varNetworkLen > 128) or ($varNetworkLen % 4) != 0) do={ :error "$1 is invalid IPv6 network" }
+
+    :local varNetworkMask [$MakeIP6PrefixMask $varNetworkLen]
+
+    :set varAddr ($varAddr & $varNetworkMask)
+
+    :return {"address"=$varAddr;"length"=$varNetworkLen;"mask"=$varNetworkMask}
+}
+
 # Make an RFC1886 domain from an IPv6 address.
 #
 # $1 (ip6, str): IPv6 address
@@ -519,17 +545,14 @@
 :global MakeIP6NetworkDomain do={
     :global MakeIP6PrefixMask
     :global MakeIP6FieldsFromAddress
+    :global StructureIP6Network
+
+    :local argNetwork [$StructureIP6Network $1]
 
     :local argNetwork [:tostr $1]
-    :local varDelimIdx [:find $1 "/" -1]
+    :local varAddr ($argNetwork->"address")
+    :local varNetworkLen ($argNetwork->"length")
 
-    :local varAddr [:toip6 [:pick $argNetwork -1 $varDelimIdx]]
-    :if ([:typeof $varAddr] != "ip6") do={ :error "\"$1\" is invalid IPv6 network"}
-
-    :local varNetworkLen [:tonum [:pick $argNetwork ($varDelimIdx + 1) [:len $argNetwork]]]
-    :if (($varNetworkLen < 0) or ($varNetworkLen > 128) or ($varNetworkLen % 4) != 0) do={ :error "$1 is invalid IPv6 network" }
-
-    :set varAddr ($varAddr & [$MakeIP6PrefixMask $varNetworkLen])
     :local varFields [$MakeIP6FieldsFromAddress $varAddr]
     :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" : "f"}
     :local varNibbleMask {0xf000 ; 0x0f00 ; 0x00f0 ; 0x000f}

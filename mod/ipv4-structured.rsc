@@ -67,6 +67,32 @@
     :return [:toip "$($1->0).$($1->1).$($1->2).$($1->3)"]
 }
 
+# Structure an IPv4 network.
+#
+# $1 (ip-prefix, str): IPv4 network
+#
+# > :put [$StructureIPNetwork 192.0.2.1/8]
+# address=192.0.0.0;length=8;mask=255.0.0.0
+#
+:global StructureIPNetwork do={
+    :global MakeIPPrefixMask
+
+    :local argNetwork [:tostr $1]
+    :local varDelimIdx [:find $1 "/" -1]
+
+    :local varAddr [:toip [:pick $argNetwork -1 $varDelimIdx]]
+    :if ([:typeof $varAddr] != "ip") do={ :error "\"$1\" is invalid IPv4 network"}
+
+    :local varNetworkLen [:tonum [:pick $argNetwork ($varDelimIdx + 1) [:len $argNetwork]]]
+    :if (($varNetworkLen < 0) or ($varNetworkLen > 32) or ($varNetworkLen % 4) != 0) do={ :error "$1 is invalid IPv4 network" }
+
+    :local varNetworkMask [$MakeIPPrefixMask $varNetworkLen]
+
+    :set varAddr ($varAddr & $varNetworkMask)
+
+    :return {"address"=$varAddr;"length"=$varNetworkLen;"mask"=$varNetworkMask}
+}
+
 # Make an RFC1035 domain from an IPv4 address.
 #
 # $1 (ip4, str): IPv4 address
@@ -96,20 +122,15 @@
 :global MakeIPNetworkDomain do={
     :global MakeIPPrefixMask
     :global MakeIPFieldsFromAddress
+    :global StructureIPNetwork
 
-    :local argNetwork [:tostr $1]
-    :local varDelimIdx [:find $1 "/" -1]
+    :local argNetwork [$StructureIPNetwork $1]
+    :local varAddr ($argNetwork->"address")
+    :local varNetworkLen ($argNetwork->"length")
 
-    :local varAddr [:toip [:pick $argNetwork -1 $varDelimIdx]]
-    :if ([:typeof $varAddr] != "ip") do={ :error "\"$1\" is invalid IPv4 network"}
-
-    :local varNetworkLen [:tonum [:pick $argNetwork ($varDelimIdx + 1) [:len $argNetwork]]]
-    :if (($varNetworkLen < 0) or ($varNetworkLen > 32)) do={ :error "$1 is invalid IPv4 network" }
-
-    :set varAddr ($varAddr & [$MakeIPPrefixMask $varNetworkLen])
     :local varFields [$MakeIPFieldsFromAddress $varAddr]
-
     :local varDomain "in-addr.arpa"
+
     :for fieldIdx from=0 to=($varNetworkLen / 8 - 1) step=1 do={
         :set varDomain "$($varFields->$fieldIdx).$varDomain"
     }
