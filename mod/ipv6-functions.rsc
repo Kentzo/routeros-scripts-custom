@@ -129,3 +129,34 @@
         :error "fatal error in ipv6-functions.rsc/AssertNotEmpty"
     }
 }
+
+# Remove duplicates from the array.
+#
+# $1 (array): An array of items with defined relational operator '='.
+#
+# > :put [$DeduplicateArray ({1;2;3;1})]
+# 1;2;3
+#
+:global DeduplicateArray do={
+    :local varDuplicatesIdx ({})
+
+    :for i from=([:len $1] - 1) to=0 step=1 do={
+        :local j ($i - 1)
+        :while ($j >= 0 and $varDuplicatesIdx->"$i" != true) do={
+            :if ($1->$i = $1->$j) do={
+                :set ($varDuplicatesIdx->"$i") true
+            }
+
+            :set j ($j - 1)
+        }
+    }
+
+    :local varArray ({})
+    :for i from=0 to=([:len $1] - 1) step=1 do={
+        :if ($varDuplicatesIdx->"$i" != true) do={
+            :set varArray ($varArray , $1->$i)
+        }
+    }
+
+    :return $varArray
+}
