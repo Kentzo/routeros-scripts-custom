@@ -129,7 +129,7 @@
 # 2001:db8::1
 #
 :global MakeIP6AddressFromFields do={
-    :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" : "f"}
+    :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" ; "f"}
     :local varNibbleMask {0x000f ; 0x00f0 ; 0x0f00 ; 0xf000}
     :local varAddr ""
 
@@ -552,7 +552,7 @@
     :local varNetworkLen ($argNetwork->"length")
 
     :local varFields [$MakeIP6FieldsFromAddress $varAddr]
-    :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" : "f"}
+    :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" ; "f"}
     :local varNibbleMask {0xf000 ; 0x0f00 ; 0x00f0 ; 0x000f}
     :local varDomain "ip6.arpa"
 
