@@ -526,7 +526,7 @@
 # $1 (ip6-prefix, str): IPv6 prefix
 #
 # > :put [$StructureIP6Prefix 2001:db8::1/64]
-# address=2001:db8::;length=64;mask=ffff:ffff:ffff:ffff::
+# address=2001:db8::;length=64;mask=ffff:ffff:ffff:ffff::;prefix=2001:db8::/64
 #
 :global StructureIP6Prefix do={
     :global MakeIP6PrefixMask
@@ -543,8 +543,7 @@
     :local varPrefixMask [$MakeIP6PrefixMask $varPrefixLen]
 
     :set varAddr ($varAddr & $varPrefixMask)
-
-    :return {"address"=$varAddr ; "prefix"=[[:parse ":return $varAddr/$varPrefixLen"]]; length"=$varPrefixLen ; "mask"=$varPrefixMask}
+    :return {"address"=$varAddr ; "prefix"=[[:parse ":return $varAddr/$varPrefixLen"]] ; "length"=$varPrefixLen ; "mask"=$varPrefixMask}
 }
 
 # Make an RFC1886 domain from an IPv6 address.
