@@ -121,14 +121,14 @@
     :return [$funcParseFields $varAddr]
 }
 
-# Make an IPv6 address from an array of eight 16bit integers.
+# Expand an array of eight 16bit integers into a IPv6 address string with all nibbles present.
 #
 # $1 (array): IPv6 address fields
 #
-# > :put [$MakeIP6AddressFromFields ({8193;3512;0;0;0;0;0;1})]
-# 2001:db8::1
+# > :put [$ExpandIP6AddressFromFields ({8193;3512;0;0;0;0;0;1})]
+# 2001:0db8:0000:0000:0000:0000:0000:0001
 #
-:global MakeIP6AddressFromFields do={
+:global ExpandIP6AddressFromFields do={
     :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" ; "f"}
     :local varNibbleMask {0x000f ; 0x00f0 ; 0x0f00 ; 0xf000}
     :local varAddr ""
@@ -143,13 +143,38 @@
                 :set varAddr ($varAddr . $varNibble)
             }
         } else={
-            :set varAddr ($varAddr . "0")
+            :set varAddr ($varAddr . "0000")
         }
 
         :if ($fieldIdx != 7) do={ :set varAddr ($varAddr . ":") }
     }
 
-    :return [:toip6 $varAddr]
+    :return $varAddr
+}
+
+# Expand IPv6 address into a string with all nibbles present.
+#
+# $1 (ip6, str): IPv6 address
+#
+# > :put [$ExpandIP6Address 2001:db8::1]
+# 2001:0db8:0000:0000:0000:0000:0000:0001
+#
+:global ExpandIP6Address do={
+    :global MakeIP6FieldsFromAddress
+    :global ExpandIP6AddressFromFields
+    :return [$ExpandIP6AddressFromFields [$MakeIP6FieldsFromAddress $1]]
+}
+
+# Make an IPv6 address from an array of eight 16bit integers.
+#
+# $1 (array): IPv6 address fields
+#
+# > :put [$MakeIP6AddressFromFields ({8193;3512;0;0;0;0;0;1})]
+# 2001:db8::1
+#
+:global MakeIP6AddressFromFields do={
+    :global ExpandIP6Address
+    :return [:toip6 [$ExpandIP6Address $1]]
 }
 
 # Make an IPv6 address from a MAC via the EUI-64 method.
