@@ -109,7 +109,7 @@
 
 # Make an RFC1034 / RFC2317 domain from an IPv4 network.
 #
-# $1 (ip-prefix, str): IPv4 address
+# $1 (ip-prefix, str, array): IPv4 address
 # [rfc2317] (bool): Whether to follow RFC2317 recommendation for networks on non-octet boundaries
 #
 # > :put [$MakeIPNetworkDomain 192.0.2.0/24]
@@ -124,7 +124,12 @@
     :global MakeIPFieldsFromAddress
     :global StructureIPNetwork
 
-    :local argNetwork [$StructureIPNetwork $1]
+    :local argNetwork
+    :if ([:typeof $1] = "array") do={
+        :set argNetwork $1
+    } else={
+        :set argNetwork [$StructureIPNetwork $1]
+    }
     :local varAddr ($argNetwork->"address")
     :local varNetworkLen ($argNetwork->"length")
 

@@ -562,7 +562,7 @@
 
 # Make an RFC1886 domain from an IPv6 network.
 #
-# $1 (ip6-prefix, str): IPv6 address
+# $1 (ip6-prefix, str, array): IPv6 network
 #
 # > :put [$MakeIP6NetworkDomain 2001:db8::1/32]
 # 8.b.d.0.1.0.0.2.ip6.arpa
@@ -572,7 +572,12 @@
     :global MakeIP6FieldsFromAddress
     :global StructureIP6Network
 
-    :local argNetwork [$StructureIP6Network $1]
+    :local argNetwork
+    :if ([:typeof $1] = "array") do={
+        :set argNetwork $1
+    } else={
+        :set argNetwork [$StructureIP6Network $1]
+    }
     :local varAddr ($argNetwork->"address")
     :local varNetworkLen ($argNetwork->"length")
 
