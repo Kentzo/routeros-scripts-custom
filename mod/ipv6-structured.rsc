@@ -521,30 +521,30 @@
     :return $varCommon
 }
 
-# Structure an IPv6 network.
+# Structure an IPv6 prefix.
 #
-# $1 (ip6-prefix, str): IPv6 network
+# $1 (ip6-prefix, str): IPv6 prefix
 #
-# > :put [$StructureIP6Network 2001:db8::1/64]
+# > :put [$StructureIP6Prefix 2001:db8::1/64]
 # address=2001:db8::;length=64;mask=ffff:ffff:ffff:ffff::
 #
-:global StructureIP6Network do={
+:global StructureIP6Prefix do={
     :global MakeIP6PrefixMask
 
-    :local argNetwork [:tostr $1]
+    :local argPrefix [:tostr $1]
     :local varDelimIdx [:find $1 "/" -1]
 
-    :local varAddr [:toip6 [:pick $argNetwork -1 $varDelimIdx]]
-    :if ([:typeof $varAddr] != "ip6") do={ :error "\"$1\" is invalid IPv6 network"}
+    :local varAddr [:toip6 [:pick $argPrefix -1 $varDelimIdx]]
+    :if ([:typeof $varAddr] != "ip6") do={ :error "\"$1\" is invalid IPv6 prefix"}
 
-    :local varNetworkLen [:tonum [:pick $argNetwork ($varDelimIdx + 1) [:len $argNetwork]]]
-    :if (($varNetworkLen < 0) or ($varNetworkLen > 128) or ($varNetworkLen % 4) != 0) do={ :error "$1 is invalid IPv6 network" }
+    :local varPrefixLen [:tonum [:pick $argPrefix ($varDelimIdx + 1) [:len $argPrefix]]]
+    :if (($varPrefixLen < 0) or ($varPrefixLen > 128) or ($varPrefixLen % 4) != 0) do={ :error "$1 is invalid IPv6 prefix" }
 
-    :local varNetworkMask [$MakeIP6PrefixMask $varNetworkLen]
+    :local varPrefixMask [$MakeIP6PrefixMask $varPrefixLen]
 
-    :set varAddr ($varAddr & $varNetworkMask)
+    :set varAddr ($varAddr & $varPrefixMask)
 
-    :return {"address"=$varAddr;"length"=$varNetworkLen;"mask"=$varNetworkMask}
+    :return {"address"=$varAddr ; "prefix"=[[:parse ":return $varAddr/$varPrefixLen"]]; length"=$varPrefixLen ; "mask"=$varPrefixMask}
 }
 
 # Make an RFC1886 domain from an IPv6 address.
@@ -555,38 +555,38 @@
 # 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa.
 #
 :global MakeIP6Domain do={
-    :global MakeIP6NetworkDomain
-    :local varNetwork "$1/128"
-    :return [$MakeIP6NetworkDomain $varNetwork]
+    :global MakeIP6PrefixDomain
+    :local varPrefix "$1/128"
+    :return [$MakeIP6PrefixDomain $varPrefix]
 }
 
-# Make an RFC1886 domain from an IPv6 network.
+# Make an RFC1886 domain from an IPv6 prefix.
 #
-# $1 (ip6-prefix, str, array): IPv6 network
+# $1 (ip6-prefix, str, array): IPv6 prefix
 #
-# > :put [$MakeIP6NetworkDomain 2001:db8::1/32]
+# > :put [$MakeIP6PrefixDomain 2001:db8::1/32]
 # 8.b.d.0.1.0.0.2.ip6.arpa
 #
-:global MakeIP6NetworkDomain do={
+:global MakeIP6PrefixDomain do={
     :global MakeIP6PrefixMask
     :global MakeIP6FieldsFromAddress
-    :global StructureIP6Network
+    :global StructureIP6Prefix
 
-    :local argNetwork
+    :local argPrefixStruct
     :if ([:typeof $1] = "array") do={
-        :set argNetwork $1
+        :set argPrefixStruct $1
     } else={
-        :set argNetwork [$StructureIP6Network $1]
+        :set argPrefixStruct [$StructureIP6Prefix $1]
     }
-    :local varAddr ($argNetwork->"address")
-    :local varNetworkLen ($argNetwork->"length")
+    :local varAddr ($argPrefixStruct->"address")
+    :local varPrefixLen ($argPrefixStruct->"length")
 
     :local varFields [$MakeIP6FieldsFromAddress $varAddr]
     :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" ; "f"}
     :local varNibbleMask {0xf000 ; 0x0f00 ; 0x00f0 ; 0x000f}
     :local varDomain "ip6.arpa"
 
-    :for nibbleIdx from=0 to=($varNetworkLen / 4 - 1) step=1 do={
+    :for nibbleIdx from=0 to=($varPrefixLen / 4 - 1) step=1 do={
         :local fieldIdx ($nibbleIdx / 4)
         :local fieldNibbleIdx ($nibbleIdx % 4)
         :local varNibbleNum (($varFields->$fieldIdx) & ($varNibbleMask->$fieldNibbleIdx) >> (12 -$fieldNibbleIdx * 4)) 
@@ -597,14 +597,14 @@
     :return $varDomain
 }
 
-# Deduplicate and coalesce IPv6 networks.
+# Deduplicate and coalesce IPv6 prefixes.
 #
-# $1 (array): An array of IPv6 networks
+# $1 (array): An array of IPv6 prefixes
 #
-# > :put [$DeduplicateIP6Networks ({2001:db8:0:1110::/60;2001:db8:0:2220::/60;2001:db8:0:2221::/64;2001:db8:0:1110::/60})]
+# > :put [$DeduplicateIP6Prefixes ({2001:db8:0:1110::/60;2001:db8:0:2220::/60;2001:db8:0:2221::/64;2001:db8:0:1110::/60})]
 # 2001:db8:0:1110::/60;2001:db8:0:2220::/60
 #
-:global DeduplicateIP6Networks do={
+:global DeduplicateIP6Prefixes do={
     :local varCoalescedIdx ({})
 
     :for i from=0 to=([:len $1] - 1) step=1 do={
@@ -622,12 +622,12 @@
         }
     }
 
-    :local varNetworks ({})
+    :local varPrefixes ({})
     :for i from=0 to=([:len $1] - 1) step=1 do={
         :if ($varCoalescedIdx->"$i" != true) do={
-            :set varNetworks ($varNetworks , $1->$i)
+            :set varPrefixes ($varPrefixes , $1->$i)
         }
     }
 
-    :return $varNetworks
+    :return $varPrefixes
 }
