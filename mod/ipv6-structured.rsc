@@ -306,7 +306,7 @@
 #  prefixLength (integer): Prefix length of the input
 #
 # > :put [$StructureIP6AddressCommon 2001:db8::1/64]
-# address=2001:db8::1;addressPrefix=2001:db8::/64;prefix=2001:db8::;prefixLength=64
+# address=2001:db8::1;addressPrefix=2001:db8::/64;prefix=2001:db8::;prefixLength=64;prefixMask=ffff:ffff:ffff:ffff::
 #
 :global StructureIP6AddressCommon do={
     :global MakeIP6PrefixMask
@@ -347,9 +347,9 @@
 
     :local varPrefixMask [$MakeIP6PrefixMask $varPrefixLen]
     :local varPrefix ($varAddr & $varPrefixMask)
-    :local varAddrPrefix [[:parse ":return $varAddr/$varPrefixLen"]]
+    :local varAddrPrefix [[:parse ":return $varPrefix/$varPrefixLen"]]
 
-    :return {"address"=$varAddr ; "addressPrefix"=$varAddrPrefix ; "prefix"=$varPrefix ; "prefixLength"=$varPrefixLen}
+    :return {"address"=$varAddr ; "addressPrefix"=$varAddrPrefix ; "prefix"=$varPrefix ; "prefixLength"=$varPrefixLen ; "prefixMask"=$varPrefixMask}
 }
 
 # Make a structure of type-specific IPv6 atributes.
