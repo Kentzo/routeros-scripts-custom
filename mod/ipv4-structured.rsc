@@ -67,35 +67,117 @@
     :return [:toip "$($1->0).$($1->1).$($1->2).$($1->3)"]
 }
 
-# Structure an IPv4 network.
+# Expand an array of four 8bit integers into a IPv4 address string with all decimals present.
 #
-# $1 (ip-prefix, str): IPv4 network
+# $1 (array): IPv4 address fields
 #
-# > :put [$StructureIPNetwork 192.0.2.1/8]
-# address=192.0.0.0;length=8;mask=255.0.0.0
+# > :put [$ExpandIPAddressFromFields ({192;0;2;1})]
+# 192.000.002.001
 #
-:global StructureIPNetwork do={
+:global ExpandIPAddressFromFields do={
+    :local varAddr ""
+
+    :for fieldIdx from=0 to=3 step=1 do={
+        :local varFieldNum ($1->$fieldIdx)
+        :if ($varFieldNum < 10) do={
+            :set varAddr ($varAddr . "00$varFieldNum")
+        } else={
+            :if ($varFieldNum < 100) do={
+                :set varAddr ("$varAddr" . "0$varFieldNum")
+            } else={
+                :set varAddr ("$varAddr" . "$varFieldNum")
+            }
+        }
+
+        :if ($fieldIdx != 3) do={ :set varAddr ($varAddr . ".") }
+    }
+
+    :return $varAddr
+}
+
+# Expand IPv4 address into a string with all decimals present.
+#
+# $1 (ip, str): IPv4 address
+#
+# > :put [$ExpandIPAddress 192.0.2.1]
+# 192.000.002.001
+#
+:global ExpandIPAddress do={
+    :global MakeIPFieldsFromAddress
+    :global ExpandIPAddressFromFields
+    :return [$ExpandIPAddressFromFields [$MakeIPFieldsFromAddress $1]]
+}
+
+# Make a structure of common IPv4 atributes.
+#
+# - $1 (ip, str): IPv4 address
+#   [$2] (integer): subnet prefix length; defaults to 32
+# 
+# - $1 (str, ip-prefix): IPv4 address-prefix
+#
+# Returns:
+#  address (ip): IPv4 address of the input
+#  addressPrefix (ip-prefix): IPv4 address-prefix of the input
+#  prefix (ip): Prefix of the input
+#  prefixMask (ip): Netmask of the input
+#  prefixLength (integer): Prefix length of the input
+#
+# > :put [$StructureIPAddressCommon 192.0.2.1/16]
+# address=192.0.2.1;addressPrefix=192.0.0.0/16;prefix=192.0.0.0;prefixLength=16;prefixMask=255.255.0.0
+#
+:global StructureIPAddressCommon do={
     :global MakeIPPrefixMask
 
-    :local argNetwork [:tostr $1]
-    :local varDelimIdx [:find $1 "/" -1]
+    :local varRawAddr [:toip $1]
+    :if ([:typeof $varRawAddr] = "nil") do={
+        :set varRawAddr [:tostr $1]
+    }
+    :if ([:typeof $varRawAddr] = "nil") do={ :error "\"$1\" is invalid IPv4 address" }
 
-    :local varAddr [:toip [:pick $argNetwork -1 $varDelimIdx]]
-    :if ([:typeof $varAddr] != "ip") do={ :error "\"$1\" is invalid IPv4 network"}
+    :local varAddr
+    :local varPrefix
+    :local varPrefixLen
+    :if ([:typeof $varRawAddr] = "ip") do={
+        :set varAddr $varRawAddr
 
-    :local varNetworkLen [:tonum [:pick $argNetwork ($varDelimIdx + 1) [:len $argNetwork]]]
-    :if (($varNetworkLen < 0) or ($varNetworkLen > 32) or ($varNetworkLen % 4) != 0) do={ :error "$1 is invalid IPv4 network" }
+        :if ([:typeof $2] != "nothing") do={
+            :set varPrefixLen [:tonum $2]
+        } else={
+            :set varPrefixLen 32
+        }
 
-    :local varNetworkMask [$MakeIPPrefixMask $varNetworkLen]
+        :if ([:typeof $varPrefixLen] = "nil") do={ :error "\"$2\" is invalid subnet prefix length" }
+    } else={
+        :local varDelimIdx [:find $varRawAddr "/"]
 
-    :set varAddr ($varAddr & $varNetworkMask)
+        :if ([:typeof $varDelimIdx] != "nil") do={
+            :set varAddr [:toip [:pick $varRawAddr 0 $varDelimIdx]]
+            :set varPrefixLen [:tonum [:pick $varRawAddr ($varDelimIdx + 1) [:len $varRawAddr]]]
+        } else={
+            :set varAddr [:toip $varRawAddr]
+            :set varPrefixLen 32
+        }
 
-    :return {"address"=$varAddr;"length"=$varNetworkLen;"mask"=$varNetworkMask}
+        :if ([:typeof $varAddr] = "nil") do={ :error "\"$1\" is invalid IPv4 address" }
+        :if ([:typeof $varPrefixLen] = "nil") do={ :error "\"$1\" is invalid IPv4 address" }
+    }
+
+    :local varPrefixMask [$MakeIPPrefixMask $varPrefixLen]
+    :local varPrefix ($varAddr & $varPrefixMask)
+    :local varAddrPrefix [[:parse ":return $varPrefix/$varPrefixLen"]]
+
+    :return {"address"=$varAddr ; "addressPrefix"=$varAddrPrefix ; "prefix"=$varPrefix ; "prefixLength"=$varPrefixLen ; "prefixMask"=$varPrefixMask}
 }
 
 # Make an RFC1035 domain from an IPv4 address.
 #
-# $1 (ip4, str): IPv4 address
+# - $1 (ip, str): IPv4 address
+#
+# - $1 (ip-prefix, str): IPv4 network
+#   [rfc2317] (bool): Whether to follow RFC2317 recommendation for networks on non-octet boundaries
+#
+# - $1 (array): IPv4 address structure
+#   [rfc2317] (bool): Whether to follow RFC2317 recommendation for networks on non-octet boundaries
 #
 # > :put [$MakeIPDomain 192.0.2.1]
 # 1.2.0.192.in-addr.arpa.
@@ -134,4 +216,62 @@
     }
 
     :return $varDomain
+}
+
+# Deduplicate, coalesce and sort IPv4 addresses and prefixes.
+#
+# - $1 (array): An array of IPv4 addresses and/or prefixes
+#   [structure] (bool): Whether to structure the output; defaults to false
+#
+# - $1 (array): An array of IPv4 address structures
+#
+# > :put [$DeduplicateIPAddresses ({192.0.2.0/28;192.0.2.32/28;192.0.2.40/29;192.0.2.0/28})]
+# 192.0.2.0/28;192.0.2.32/28
+#
+:global DeduplicateIPAddresses do={
+    :global StructureIPAddressCommon
+
+    # Dictionary will deduplicate and sort. 
+    :local varDeduplicatedPrefixes ({})
+    :foreach prefix in=$1 do={
+        :local prefixStruct
+        :if ([:typeof $prefix] = "array") do={
+            :set prefixStruct $prefix
+        } else={
+            :set prefixStruct [$StructureIPAddressCommon $prefix]
+        }
+
+        :local key [:ExpandIPAddress ($prefixStruct->"prefix")]
+
+        # Maintain shorter prefix.
+        :if ($varDeduplicatedPrefixes->$key != nil) do={
+            :if (prefixStruct->"prefixLength" < $varDeduplicatedPrefixes->$key->"prefixLength") do={
+                :set ($varDeduplicatedPrefixes->$key) $prefixStruct
+            }
+        } else={
+            :set ($varDeduplicatedPrefixes->$key) $prefixStruct
+        }
+    }
+
+    :local tmp ({})
+    :foreach prefixStruct in=$varDeduplicatedPrefixes do={ :set tmp ($tmp , {$prefixStruct}) }
+    :set varDeduplicatedPrefixes $tmp
+
+    :local varCoalescedPrefixes ({})
+    :for i from=([:len $varDeduplicatedPrefixes] - 1) to=1 step=-1 do={
+        :if (($varDeduplicatedPrefixes->$i->"prefix" in $varDeduplicatedPrefixes->($i - 1)->"addressPrefix") = false) do={
+            :set varCoalescedPrefixes ({$varDeduplicatedPrefixes->$i} , $varCoalescedPrefixes)
+        }
+    }
+    :set varCoalescedPrefixes ({$varDeduplicatedPrefixes->0} , $varCoalescedPrefixes)
+
+    :if ([:typeof $structure] != "nothing") do={
+        :if ([[:parse "[:tobool $structure]"]]) do={
+            :return $varCoalescedPrefixes
+        }
+    }
+
+    :set tmp ({})
+    :foreach prefixStruct in=$varCoalescedPrefixes do={ :set tmp ($tmp , $prefixStruct->"addressPrefix") }
+    :return $tmp
 }
