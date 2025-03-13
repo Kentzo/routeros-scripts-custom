@@ -523,26 +523,18 @@
 
 # Make an RFC1886 domain from an IPv6 address.
 #
-# $1 (ip6, str): IPv6 address
+# - $1 (ip6, str): IPv6 address
+#
+# - $1 (ip6-prefix, str): IPv6 prefix
+#
+# - $1 (array): IPv6 address structure
 #
 # > :put [$MakeIP6Domain 2001:db8::1]
 # 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa.
-#
-:global MakeIP6Domain do={
-    :global MakeIP6PrefixDomain
-    :local varPrefix "$1/128"
-    :return [$MakeIP6PrefixDomain $varPrefix]
-}
-
-# Make an RFC1886 domain from an IPv6 prefix.
-#
-# $1 (ip6-prefix, str, array): IPv6 prefix
-#
 # > :put [$MakeIP6PrefixDomain 2001:db8::1/32]
 # 8.b.d.0.1.0.0.2.ip6.arpa
 #
-:global MakeIP6PrefixDomain do={
-    :global MakeIP6PrefixMask
+:global MakeIP6Domain do={
     :global MakeIP6FieldsFromAddress
     :global StructureIP6AddressCommon
 
