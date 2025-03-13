@@ -603,13 +603,16 @@
     :foreach prefixStruct in=$varDeduplicatedPrefixes do={ :set tmp ($tmp , {$prefixStruct}) }
     :set varDeduplicatedPrefixes $tmp
 
-    :local varCoalescedPrefixes ({})
-    :for i from=([:len $varDeduplicatedPrefixes] - 1) to=1 step=-1 do={
-        :if (($varDeduplicatedPrefixes->$i->"prefix" in $varDeduplicatedPrefixes->($i - 1)->"addressPrefix") = false) do={
-            :set varCoalescedPrefixes ({$varDeduplicatedPrefixes->$i} , $varCoalescedPrefixes)
+    :local varCoalescedPrefixes ({$varDeduplicatedPrefixes->0})
+    :local lastParentIdx 0
+    :local i 1
+    :while ($i < [:len $varDeduplicatedPrefixes]) do={
+        :if (($varDeduplicatedPrefixes->$i->"prefix" in $varDeduplicatedPrefixes->$lastParentIdx->"addressPrefix") = false) do={
+            :set varCoalescedPrefixes ($varCoalescedPrefixes , {$varDeduplicatedPrefixes->$i})
+            :set lastParentIdx $i
         }
+        :set i ($i + 1)
     }
-    :set varCoalescedPrefixes ({$varDeduplicatedPrefixes->0} , $varCoalescedPrefixes)
 
     :if ([:typeof $structure] != "nothing") do={
         :if ([[:parse "[:tobool $structure]"]]) do={
