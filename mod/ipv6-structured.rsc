@@ -521,31 +521,6 @@
     :return $varCommon
 }
 
-# Structure an IPv6 prefix.
-#
-# $1 (ip6-prefix, str): IPv6 prefix
-#
-# > :put [$StructureIP6Prefix 2001:db8::1/64]
-# address=2001:db8::;length=64;mask=ffff:ffff:ffff:ffff::;prefix=2001:db8::/64
-#
-:global StructureIP6Prefix do={
-    :global MakeIP6PrefixMask
-
-    :local argPrefix [:tostr $1]
-    :local varDelimIdx [:find $1 "/" -1]
-
-    :local varAddr [:toip6 [:pick $argPrefix -1 $varDelimIdx]]
-    :if ([:typeof $varAddr] != "ip6") do={ :error "\"$1\" is invalid IPv6 prefix"}
-
-    :local varPrefixLen [:tonum [:pick $argPrefix ($varDelimIdx + 1) [:len $argPrefix]]]
-    :if (($varPrefixLen < 0) or ($varPrefixLen > 128) or ($varPrefixLen % 4) != 0) do={ :error "$1 is invalid IPv6 prefix" }
-
-    :local varPrefixMask [$MakeIP6PrefixMask $varPrefixLen]
-
-    :set varAddr ($varAddr & $varPrefixMask)
-    :return {"address"=$varAddr ; "prefix"=[[:parse ":return $varAddr/$varPrefixLen"]] ; "length"=$varPrefixLen ; "mask"=$varPrefixMask}
-}
-
 # Make an RFC1886 domain from an IPv6 address.
 #
 # $1 (ip6, str): IPv6 address
@@ -569,18 +544,18 @@
 :global MakeIP6PrefixDomain do={
     :global MakeIP6PrefixMask
     :global MakeIP6FieldsFromAddress
-    :global StructureIP6Prefix
+    :global StructureIP6AddressCommon
 
     :local argPrefixStruct
     :if ([:typeof $1] = "array") do={
         :set argPrefixStruct $1
     } else={
-        :set argPrefixStruct [$StructureIP6Prefix $1]
+        :set argPrefixStruct [$StructureIP6AddressCommon $1]
     }
-    :local varAddr ($argPrefixStruct->"address")
-    :local varPrefixLen ($argPrefixStruct->"length")
+    :local varPrefix ($argPrefixStruct->"prefix")
+    :local varPrefixLen ($argPrefixStruct->"prefixLength")
 
-    :local varFields [$MakeIP6FieldsFromAddress $varAddr]
+    :local varFields [$MakeIP6FieldsFromAddress $varPrefix]
     :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" ; "f"}
     :local varNibbleMask {0xf000 ; 0x0f00 ; 0x00f0 ; 0x000f}
     :local varDomain "ip6.arpa"
