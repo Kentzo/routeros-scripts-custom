@@ -1,7 +1,7 @@
 #!rsc by RouterOS
 
 # Requirements:
-#   - mod/ipv6-functions
+#   - mod/kentzo-functions
 #   - mod/ipv6-structured
 #
 # Usage:

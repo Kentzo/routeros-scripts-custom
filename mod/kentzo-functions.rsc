@@ -29,7 +29,7 @@
         $LogPrint debug $0 ("  $[:tostr $varResult]")
     } on-error={
         $LogPrint error $0 ("`$varCommand` failed")
-        :error "fatal error in ipv6-functions.rsc/RunCommandFromArray"
+        :error "fatal error in kentzo-functions.rsc/RunCommandFromArray"
     }
     :return $varResult
 }
@@ -72,7 +72,7 @@
         :foreach k,v in=$3 do={
             :if ([:typeof $k] = "num") do={
                 $LogPrint error $0 ("equality criteria cannot have non-key elements")
-                :error "fatal error in ipv6-functions.rsc/SetIfExistsElseAddUnlessEqual"
+                :error "fatal error in kentzo-functions.rsc/SetIfExistsElseAddUnlessEqual"
             }
             :local left ($varExisting->$k)
             :local right $v
@@ -109,7 +109,7 @@
                 :set varWrongAddresses ($varWrongAddresses . " $($varAddress->address)")
             }
             $LogPrint $0 error ("expected an address from $2 on $1, got ($varWrongAddresses) instead")
-            :error "fatal error in ipv6-functions.rsc/WaitIP6Address"
+            :error "fatal error in kentzo-functions.rsc/WaitIP6Address"
         } delay=1 max=5
     }
 }
@@ -121,7 +121,7 @@
 # > $AssertNotEmpty argLoopbackInt
 #
 :global AssertNotEmpty do={
-    [[:parse ":global $1; :global LogPrint; :if ([:len \$$1] = 0) do={ \$LogPrint $1 error (\"\\\$$1 cannot be empty\"); :error \"fatal error in ipv6-functions.rsc/AssertNotEmpty\" }"]]
+    [[:parse ":global $1; :global LogPrint; :if ([:len \$$1] = 0) do={ \$LogPrint $1 error (\"\\\$$1 cannot be empty\"); :error \"fatal error in kentzo-functions.rsc/AssertNotEmpty\" }"]]
 }
 
 # Remove duplicates from the array.

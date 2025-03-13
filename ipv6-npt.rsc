@@ -35,7 +35,7 @@
 #
 #
 # Requirements:
-#   - mod/ipv6-functions
+#   - mod/kentzo-functions
 
 :global GlobalFunctionsReady;
 :while ($GlobalFunctionsReady != true) do={ :delay 500ms; }
