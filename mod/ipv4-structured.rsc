@@ -99,39 +99,26 @@
 #
 # > :put [$MakeIPDomain 192.0.2.1]
 # 1.2.0.192.in-addr.arpa.
-#
-:global MakeIPDomain do={
-    :global MakeIPFieldsFromAddress
-
-    :local varFields [$MakeIPFieldsFromAddress $1]
-    :return "$($varFields->3).$($varFields->2).$($varFields->1).$($varFields->0).in-addr.arpa"
-}
-
-# Make an RFC1034 / RFC2317 domain from an IPv4 network.
-#
-# $1 (ip-prefix, str, array): IPv4 address
-# [rfc2317] (bool): Whether to follow RFC2317 recommendation for networks on non-octet boundaries
-#
-# > :put [$MakeIPNetworkDomain 192.0.2.0/24]
+# > :put [$MakeIPDomain 192.0.2.0/24]
 # 2.0.192.in-addr.arpa.
-# > :put [$MakeIPNetworkDomain 192.0.2.0/25]
+# > :put [$MakeIPDomain 192.0.2.0/25]
 # 2.0.192.in-addr.arpa.
-# > :put [$MakeIPNetworkDomain 192.0.2.0/25 rfc2317=yes]
+# > :put [$MakeIPDomain 192.0.2.0/25 rfc2317=yes]
 # 0/25.2.0.192.in-addr.arpa.
 #
-:global MakeIPNetworkDomain do={
+:global MakeIPDomain do={
     :global MakeIPPrefixMask
     :global MakeIPFieldsFromAddress
-    :global StructureIPNetwork
+    :global StructureIPAddressCommon
 
-    :local argNetwork
+    :local argNetworkStruct
     :if ([:typeof $1] = "array") do={
-        :set argNetwork $1
+        :set argNetworkStruct $1
     } else={
-        :set argNetwork [$StructureIPNetwork $1]
+        :set argNetworkStruct [$StructureIPAddressCommon $1]
     }
-    :local varAddr ($argNetwork->"address")
-    :local varNetworkLen ($argNetwork->"length")
+    :local varAddr ($argNetworkStruct->"prefix")
+    :local varNetworkLen ($argNetworkStruct->"prefixLength")
 
     :local varFields [$MakeIPFieldsFromAddress $varAddr]
     :local varDomain "in-addr.arpa"
