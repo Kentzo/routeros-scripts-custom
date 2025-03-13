@@ -125,10 +125,10 @@
 :global argUlaPool
 :global argManagedID
 
-$AssertNotEmpty "argLoopbackInt" $argLoopbackInt
-$AssertNotEmpty "argWanPool" $argWanPool
-$AssertNotEmpty "argUlaPool" $argUlaPool
-$AssertNotEmpty "argManagedID" $argManagedID
+$AssertNotEmpty argLoopbackInt
+$AssertNotEmpty argWanPool
+$AssertNotEmpty argUlaPool
+$AssertNotEmpty argManagedID
 
 
 /ipv6/pool

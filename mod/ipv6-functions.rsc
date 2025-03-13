@@ -114,20 +114,14 @@
     }
 }
 
-# Assert that a given variable named $1 has non-empty value $2.
+# Assert that a given global variable named $1 has a non-empty value.
 #
-# $1 (str): Name of the variable for logging
-# $2: Value for checking
+# $1 (str): Name of the variable
 #
-# > $AssertNotEmpty argLoopbackInt $argLoopbackInt
+# > $AssertNotEmpty argLoopbackInt
 #
 :global AssertNotEmpty do={
-    :global LogPrint
-
-    :if ([:len $2] = 0) do={
-        $LogPrint $0 error ("$1 cannot be empty")
-        :error "fatal error in ipv6-functions.rsc/AssertNotEmpty"
-    }
+    [[:parse ":global $1; :global LogPrint; :if ([:len \$$1] = 0) do={ \$LogPrint $1 error (\"\\\$$1 cannot be empty\"); :error \"fatal error in ipv6-functions.rsc/AssertNotEmpty\" }"]]
 }
 
 # Remove duplicates from the array.
