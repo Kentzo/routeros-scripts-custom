@@ -563,37 +563,61 @@
     :return $varDomain
 }
 
-# Deduplicate and coalesce IPv6 prefixes.
+# Deduplicate, coalesce and sort IPv6 addresses and prefixes.
 #
-# $1 (array): An array of IPv6 prefixes
+# - $1 (array): An array of IPv6 addresses and/or prefixes
+#   [structure] (bool): Whether to structure the output; defaults to false
 #
-# > :put [$DeduplicateIP6Prefixes ({2001:db8:0:1110::/60;2001:db8:0:2220::/60;2001:db8:0:2221::/64;2001:db8:0:1110::/60})]
+# - $1 (array): An array of IPv6 address structures
+#
+# > :put [$DeduplicateIP6Addresses ({2001:db8:0:1110::/60;2001:db8:0:2220::/60;2001:db8:0:2221::/64;2001:db8:0:1110::/60})]
 # 2001:db8:0:1110::/60;2001:db8:0:2220::/60
 #
-:global DeduplicateIP6Prefixes do={
-    :local varCoalescedIdx ({})
+:global DeduplicateIP6Addresses do={
+    :global StructureIP6AddressCommon
+    :global ExpandIP6Address
 
-    :for i from=0 to=([:len $1] - 1) step=1 do={
-        :local j ($i + 1)
-        :while ($j < [:len $1] and $varCoalescedIdx->"$i" != true) do={
-            :if ($1->$j in $1->$i) do={
-                :set ($varCoalescedIdx->"$j") true
-            } else={
-                :if ($1->$i in $1->$j) do={
-                    :set ($varCoalescedIdx->"$i") true
-                }
+    # Dictionary will deduplicate and sort. 
+    :local varDeduplicatedPrefixes ({})
+    :foreach prefix in=$1 do={
+        :local prefixStruct
+        :if ([:typeof $prefix] = "array") do={
+            :set prefixStruct $prefix
+        } else={
+            :set prefixStruct [$StructureIP6AddressCommon $prefix]
+        }
+
+        :local key [$ExpandIP6Address ($prefixStruct->"prefix")]
+
+        # Maintain shorter prefix.
+        :if ($varDeduplicatedPrefixes->$key != nil) do={
+            :if (prefixStruct->"prefixLength" < $varDeduplicatedPrefixes->$key->"prefixLength") do={
+                :set ($varDeduplicatedPrefixes->$key) $prefixStruct
             }
-
-            :set j ($j + 1)
+        } else={
+            :set ($varDeduplicatedPrefixes->$key) $prefixStruct
         }
     }
 
-    :local varPrefixes ({})
-    :for i from=0 to=([:len $1] - 1) step=1 do={
-        :if ($varCoalescedIdx->"$i" != true) do={
-            :set varPrefixes ($varPrefixes , $1->$i)
+    :local tmp ({})
+    :foreach prefixStruct in=$varDeduplicatedPrefixes do={ :set tmp ($tmp , {$prefixStruct}) }
+    :set varDeduplicatedPrefixes $tmp
+
+    :local varCoalescedPrefixes ({})
+    :for i from=([:len $varDeduplicatedPrefixes] - 1) to=1 step=-1 do={
+        :if (($varDeduplicatedPrefixes->$i->"prefix" in $varDeduplicatedPrefixes->($i - 1)->"addressPrefix") = false) do={
+            :set varCoalescedPrefixes ({$varDeduplicatedPrefixes->$i} , $varCoalescedPrefixes)
+        }
+    }
+    :set varCoalescedPrefixes ({$varDeduplicatedPrefixes->0} , $varCoalescedPrefixes)
+
+    :if ([:typeof $structure] != "nothing") do={
+        :if ([[:parse "[:tobool $structure]"]]) do={
+            :return $varCoalescedPrefixes
         }
     }
 
-    :return $varPrefixes
+    :set tmp ({})
+    :foreach prefixStruct in=$varCoalescedPrefixes do={ :set tmp ($tmp , $prefixStruct->"addressPrefix") }
+    :return $tmp
 }
