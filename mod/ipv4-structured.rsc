@@ -36,7 +36,7 @@
     :local argAddr [:toip $1]
     :if ([:typeof $argAddr] != "ip") do={ :error "\"$1\" is invalid IPv4 address"}
     :set argAddr [:tostr $argAddr]
-    
+
     :local varLastDelimIdx -1
 
     :local varDelimIdx [:find $argAddr "." $varLastDelimIdx]
@@ -112,7 +112,7 @@
 #
 # - $1 (ip, str): IPv4 address
 #   [$2] (integer): subnet prefix length; defaults to 32
-# 
+#
 # - $1 (str, ip-prefix): IPv4 address-prefix
 #
 # Returns:
@@ -231,7 +231,7 @@
 :global DeduplicateIPAddresses do={
     :global StructureIPAddressCommon
 
-    # Dictionary will deduplicate and sort. 
+    # Dictionary will deduplicate and sort.
     :local varDeduplicatedPrefixes ({})
     :foreach prefix in=$1 do={
         :local prefixStruct
@@ -244,7 +244,7 @@
         :local key [:ExpandIPAddress ($prefixStruct->"prefix")]
 
         # Maintain shorter prefix.
-        :if ($varDeduplicatedPrefixes->$key != nil) do={
+        :if ([:typeof $varDeduplicatedPrefixes->$key] != "nil") do={
             :if (prefixStruct->"prefixLength" < $varDeduplicatedPrefixes->$key->"prefixLength") do={
                 :set ($varDeduplicatedPrefixes->$key) $prefixStruct
             }

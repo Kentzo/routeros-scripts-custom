@@ -296,7 +296,7 @@
 #
 # - $1 (ip6, str): IPv6 address
 #   [$2] (integer): subnet prefix length; defaults to 128
-# 
+#
 # - $1 (str, ip6-prefix): IPv6 address-prefix
 #
 # Returns:
@@ -492,7 +492,7 @@
             :set subnetID ($varAddr & (~([$MakeIP6PrefixMask $globalIDLen])) & (~([$MakeIP6SuffixMask 64])))
         }
     }
-    
+
     :return {"type"="unicast" ; "subtype"=$subtype ; "fields"=$varFields ; "globalID"=$globalID ; "subnetID"=$subnetID ; "interfaceID"=$interfaceID}
 }
 
@@ -515,7 +515,7 @@
         :if ([[:parse "[:tobool $detail]"]]) do={
             :local varDetail [$StructureIP6AddressDetail $varCommon]
             :set varCommon ($varCommon , {"detail"=$varDetail})
-        } 
+        }
     }
 
     :return $varCommon
@@ -555,7 +555,7 @@
     :for nibbleIdx from=0 to=($varPrefixLen / 4 - 1) step=1 do={
         :local fieldIdx ($nibbleIdx / 4)
         :local fieldNibbleIdx ($nibbleIdx % 4)
-        :local varNibbleNum (($varFields->$fieldIdx) & ($varNibbleMask->$fieldNibbleIdx) >> (12 -$fieldNibbleIdx * 4)) 
+        :local varNibbleNum (($varFields->$fieldIdx) & ($varNibbleMask->$fieldNibbleIdx) >> (12 -$fieldNibbleIdx * 4))
         :local varNibble ($varHexMap->$varNibbleNum)
         :set varDomain ("$varNibble." . $varDomain)
     }
@@ -577,7 +577,7 @@
     :global StructureIP6AddressCommon
     :global ExpandIP6Address
 
-    # Dictionary will deduplicate and sort. 
+    # Dictionary will deduplicate and sort.
     :local varDeduplicatedPrefixes ({})
     :foreach prefix in=$1 do={
         :local prefixStruct
@@ -590,7 +590,7 @@
         :local key [$ExpandIP6Address ($prefixStruct->"prefix")]
 
         # Maintain shorter prefix.
-        :if ($varDeduplicatedPrefixes->$key != nil) do={
+        :if ([:typeof $varDeduplicatedPrefixes->$key] != "nil") do={
             :if (prefixStruct->"prefixLength" < $varDeduplicatedPrefixes->$key->"prefixLength") do={
                 :set ($varDeduplicatedPrefixes->$key) $prefixStruct
             }
