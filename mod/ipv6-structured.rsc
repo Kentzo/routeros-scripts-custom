@@ -550,7 +550,7 @@
     :local varFields [$MakeIP6FieldsFromAddress $varPrefix]
     :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" ; "f"}
     :local varNibbleMask {0xf000 ; 0x0f00 ; 0x00f0 ; 0x000f}
-    :local varDomain "ip6.arpa"
+    :local varDomain "ip6.arpa."
 
     :for nibbleIdx from=0 to=($varPrefixLen / 4 - 1) step=1 do={
         :local fieldIdx ($nibbleIdx / 4)

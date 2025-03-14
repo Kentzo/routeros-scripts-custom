@@ -203,7 +203,7 @@
     :local varNetworkLen ($argNetworkStruct->"prefixLength")
 
     :local varFields [$MakeIPFieldsFromAddress $varAddr]
-    :local varDomain "in-addr.arpa"
+    :local varDomain "in-addr.arpa."
 
     :for fieldIdx from=0 to=($varNetworkLen / 8 - 1) step=1 do={
         :set varDomain "$($varFields->$fieldIdx).$varDomain"
