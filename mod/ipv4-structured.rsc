@@ -263,7 +263,7 @@
             :set varCoalescedPrefixes ($varCoalescedPrefixes , {$varDeduplicatedPrefixes->$varCurIdx})
             :set varParentIdx $varCurIdx
         }
-        :set i ($varCurIdx + 1)
+        :set varCurIdx ($varCurIdx + 1)
     }
 
     :if ([:len $structure] != 0) do={
