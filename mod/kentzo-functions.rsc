@@ -152,3 +152,29 @@
 
     :return $varArray
 }
+
+# Get all keys of an array.
+#
+# $1 (array): An array.
+#
+# > :put [$GetArrayKeys ({"a"=1;"b"=2;3;4;5})]
+# 0;1;2;a;b
+#
+:global GetArrayKeys do={
+    :local varTmp ({})
+    :foreach k,v in=$1 do={ :set varTmp ($varTmp , {$k}) }
+    :return $varTmp
+}
+
+# Get all values of an array.
+#
+# $1 (array): An array.
+#
+# > :put [$GetArrayValues ({"a"=1;"b"=2;3;4;5})]
+# 3;4;5;1;2
+#
+:global GetArrayValues do={
+    :local varTmp ({})
+    :foreach k,v in=$1 do={ :set varTmp ($varTmp , {$v}) }
+    :return $varTmp
+}
