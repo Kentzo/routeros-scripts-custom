@@ -228,43 +228,42 @@
 #
 :global DeduplicateIPAddresses do={
     :global ExpandIPAddress
+    :global GetArrayValues
     :global StructureIPAddressCommon
 
     # Dictionary will deduplicate and sort.
     :local varDeduplicatedPrefixes ({})
     :foreach prefix in=$1 do={
-        :local prefixStruct
+        :local varPrefixStruct
         :if ([:typeof $prefix] = "array") do={
-            :set prefixStruct $prefix
+            :set varPrefixStruct $prefix
         } else={
-            :set prefixStruct [$StructureIPAddressCommon $prefix]
+            :set varPrefixStruct [$StructureIPAddressCommon $prefix]
         }
 
-        :local key [$ExpandIPAddress ($prefixStruct->"prefix")]
+        :local varSortKey [$ExpandIPAddress ($varPrefixStruct->"prefix")]
 
         # Maintain shorter prefix.
-        :if ($varDeduplicatedPrefixes->$key != nil) do={
-            :if (prefixStruct->"prefixLength" < $varDeduplicatedPrefixes->$key->"prefixLength") do={
-                :set ($varDeduplicatedPrefixes->$key) $prefixStruct
+        :if ($varDeduplicatedPrefixes->$varSortKey != nil) do={
+            :if ($varPrefixStruct->"prefixLength" < $varDeduplicatedPrefixes->$varSortKey->"prefixLength") do={
+                :set ($varDeduplicatedPrefixes->$varSortKey) $varPrefixStruct
             }
         } else={
-            :set ($varDeduplicatedPrefixes->$key) $prefixStruct
+            :set ($varDeduplicatedPrefixes->$varSortKey) $varPrefixStruct
         }
     }
 
-    :local tmp ({})
-    :foreach prefixStruct in=$varDeduplicatedPrefixes do={ :set tmp ($tmp , {$prefixStruct}) }
-    :set varDeduplicatedPrefixes $tmp
+    :set varDeduplicatedPrefixes [$GetArrayValues $varDeduplicatedPrefixes]
 
     :local varCoalescedPrefixes ({$varDeduplicatedPrefixes->0})
-    :local lastParentIdx 0
-    :local i 1
-    :while ($i < [:len $varDeduplicatedPrefixes]) do={
-        :if (($varDeduplicatedPrefixes->$i->"prefix" in $varDeduplicatedPrefixes->$lastParentIdx->"addressPrefix") = false) do={
-            :set varCoalescedPrefixes ($varCoalescedPrefixes , {$varDeduplicatedPrefixes->$i})
-            :set lastParentIdx $i
+    :local varParentIdx 0
+    :local varCurIdx 1
+    :while ($varCurIdx < [:len $varDeduplicatedPrefixes]) do={
+        :if (($varDeduplicatedPrefixes->$varCurIdx->"prefix" in $varDeduplicatedPrefixes->$varParentIdx->"addressPrefix") = false) do={
+            :set varCoalescedPrefixes ($varCoalescedPrefixes , {$varDeduplicatedPrefixes->$varCurIdx})
+            :set varParentIdx $varCurIdx
         }
-        :set i ($i + 1)
+        :set i ($varCurIdx + 1)
     }
 
     :if ([:len $structure] != 0) do={
@@ -273,7 +272,7 @@
         }
     }
 
-    :set tmp ({})
-    :foreach prefixStruct in=$varCoalescedPrefixes do={ :set tmp ($tmp , $prefixStruct->"addressPrefix") }
-    :return $tmp
+    :local varTmp ({})
+    :foreach prefixStruct in=$varCoalescedPrefixes do={ :set varTmp ($varTmp , $prefixStruct->"addressPrefix") }
+    :return $varTmp
 }
