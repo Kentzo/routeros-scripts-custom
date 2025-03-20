@@ -244,7 +244,7 @@
         :local varSortKey [$ExpandIPAddress ($varPrefixStruct->"prefix")]
 
         # Maintain shorter prefix.
-        :if ($varDeduplicatedPrefixes->$varSortKey != nil) do={
+        :if ([:typeof ($varDeduplicatedPrefixes->$varSortKey)] != "nothing") do={
             :if ($varPrefixStruct->"prefixLength" < $varDeduplicatedPrefixes->$varSortKey->"prefixLength") do={
                 :set ($varDeduplicatedPrefixes->$varSortKey) $varPrefixStruct
             }
