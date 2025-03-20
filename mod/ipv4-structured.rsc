@@ -227,6 +227,7 @@
 # 192.0.2.0/28;192.0.2.32/28
 #
 :global DeduplicateIPAddresses do={
+    :global ExpandIPAddress
     :global StructureIPAddressCommon
 
     # Dictionary will deduplicate and sort.
@@ -239,7 +240,7 @@
             :set prefixStruct [$StructureIPAddressCommon $prefix]
         }
 
-        :local key [:ExpandIPAddress ($prefixStruct->"prefix")]
+        :local key [$ExpandIPAddress ($prefixStruct->"prefix")]
 
         # Maintain shorter prefix.
         :if ($varDeduplicatedPrefixes->$key != nil) do={
