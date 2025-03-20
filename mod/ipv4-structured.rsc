@@ -129,9 +129,7 @@
     :global MakeIPPrefixMask
 
     :local varRawAddr [:toip $1]
-    :if ([:typeof $varRawAddr] = "nil") do={
-        :set varRawAddr [:tostr $1]
-    }
+    :if ([:typeof $varRawAddr] = "nil") do={ :set varRawAddr [:tostr $1] }
     :if ([:typeof $varRawAddr] = "nil") do={ :error "\"$1\" is invalid IPv4 address" }
 
     :local varAddr
@@ -140,7 +138,7 @@
     :if ([:typeof $varRawAddr] = "ip") do={
         :set varAddr $varRawAddr
 
-        :if ([:typeof $2] != "nothing") do={
+        :if ([:len $2] != 0) do={
             :set varPrefixLen [:tonum $2]
         } else={
             :set varPrefixLen 32
@@ -209,7 +207,7 @@
         :set varDomain "$($varFields->$fieldIdx).$varDomain"
     }
 
-    :if ((($varNetworkLen % 8) != 0) and ([:typeof $rfc2317] != "nothing")) do={
+    :if ((($varNetworkLen % 8) != 0) and ([:len $rfc2317] != 0)) do={
         :if ([[:parse "[:tobool $rfc2317]"]]) do={
             :set varDomain "$($varFields->($varNetworkLen / 8))/$varNetworkLen.$varDomain"
         }
@@ -244,7 +242,7 @@
         :local key [:ExpandIPAddress ($prefixStruct->"prefix")]
 
         # Maintain shorter prefix.
-        :if ([:typeof $varDeduplicatedPrefixes->$key] != "nil") do={
+        :if ($varDeduplicatedPrefixes->$key != nil) do={
             :if (prefixStruct->"prefixLength" < $varDeduplicatedPrefixes->$key->"prefixLength") do={
                 :set ($varDeduplicatedPrefixes->$key) $prefixStruct
             }
@@ -268,7 +266,7 @@
         :set i ($i + 1)
     }
 
-    :if ([:typeof $structure] != "nothing") do={
+    :if ([:len $structure] != 0) do={
         :if ([[:parse "[:tobool $structure]"]]) do={
             :return $varCoalescedPrefixes
         }

@@ -312,9 +312,7 @@
     :global MakeIP6PrefixMask
 
     :local varRawAddr [:toip6 $1]
-    :if ([:typeof $varRawAddr] = "nil") do={
-        :set varRawAddr [:tostr $1]
-    }
+    :if ([:typeof $varRawAddr] = "nil") do={ :set varRawAddr [:tostr $1] }
     :if ([:typeof $varRawAddr] = "nil") do={ :error "\"$1\" is invalid IPv6 address" }
 
     :local varAddr
@@ -323,7 +321,7 @@
     :if ([:typeof $varRawAddr] = "ip6") do={
         :set varAddr $varRawAddr
 
-        :if ([:typeof $2] != "nothing") do={
+        :if ([:len $2] != 0) do={
             :set varPrefixLen [:tonum $2]
         } else={
             :set varPrefixLen 128
@@ -511,7 +509,7 @@
 
     :local varCommon [$StructureIP6AddressCommon $1 $2]
 
-    :if ([:typeof $detail] != "nothing") do={
+    :if ([:len $detail] != 0) do={
         :if ([[:parse "[:tobool $detail]"]]) do={
             :local varDetail [$StructureIP6AddressDetail $varCommon]
             :set varCommon ($varCommon , {"detail"=$varDetail})
@@ -590,7 +588,7 @@
         :local key [$ExpandIP6Address ($prefixStruct->"prefix")]
 
         # Maintain shorter prefix.
-        :if ([:typeof $varDeduplicatedPrefixes->$key] != "nil") do={
+        :if ($varDeduplicatedPrefixes->$key != nil) do={
             :if (prefixStruct->"prefixLength" < $varDeduplicatedPrefixes->$key->"prefixLength") do={
                 :set ($varDeduplicatedPrefixes->$key) $prefixStruct
             }
@@ -614,7 +612,7 @@
         :set i ($i + 1)
     }
 
-    :if ([:typeof $structure] != "nothing") do={
+    :if ([:len $structure] != 0) do={
         :if ([[:parse "[:tobool $structure]"]]) do={
             :return $varCoalescedPrefixes
         }

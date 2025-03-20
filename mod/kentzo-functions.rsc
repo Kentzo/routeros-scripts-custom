@@ -79,8 +79,6 @@
             :if ($left != $right) do={
                 $LogPrint debug $0 ("\"$k\": $left != $right")
                 $RunCommandFromArray ("$1/set") ($4 , {numbers=($varExisting->".id")})
-
-                :return []
             }
         }
     } else={
