@@ -94,7 +94,7 @@
     :if ($varDelimIdx = 0) do={
         :local varFieldsTail [$funcParseFields [:pick $varAddr 2 $varAddrLen]]
         :local varFieldsHead ({})
-        :for i from=0 to=(7 - [:len varFieldsTail]) step=1 do={ :set varFieldsHead ($varFieldsHead , 0) }
+        :for i from=0 to=(7 - [:len $varFieldsTail]) step=1 do={ :set varFieldsHead ($varFieldsHead , 0) }
         :return ($varFieldsHead , $varFieldsTail)
     }
 
@@ -102,7 +102,7 @@
     :if ($varDelimIdx = ($varAddrLen - 2)) do={
         :local varFieldsHead [$funcParseFields [:pick $varAddr 0 $varDelimIdx]]
         :local varFieldsTail ({})
-        :for i from=0 to=(7 - [:len varFieldsTail]) step=1 do={ :set varFieldsTail ($varFieldsTail , 0) }
+        :for i from=0 to=(7 - [:len $varFieldsHead]) step=1 do={ :set varFieldsTail ($varFieldsTail , 0) }
         :return ($varFieldsHead , $varFieldsTail)
     }
 
