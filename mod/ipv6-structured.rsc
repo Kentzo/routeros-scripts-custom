@@ -160,8 +160,9 @@
 # 2001:0db8:0000:0000:0000:0000:0000:0001
 #
 :global ExpandIP6Address do={
-    :global MakeIP6FieldsFromAddress
     :global ExpandIP6AddressFromFields
+    :global MakeIP6FieldsFromAddress
+
     :return [$ExpandIP6AddressFromFields [$MakeIP6FieldsFromAddress $1]]
 }
 
@@ -187,6 +188,9 @@
 # 2001:db8::200:5eff:fe00:5301
 #
 :global MakeIP6AddressFromEUI64 do={
+    :global MakeIP6AddressFromFields
+    :global MakeIP6FieldsFromAddress
+
     :local argAddr [:toip6 $1]
     :if ([:typeof $argAddr] != "ip6") do={ :error "\"$1\" is invalid IPv6 address"}
 
@@ -250,13 +254,13 @@
     :set varDstPrefix [$StructureIP6Address ($varDstPrefix->"prefix") detail=yes]
     :local varDstFields ($varDstPrefix->"detail"->"fields")
 
-    :local MakeOneComplement do={ :return ($1 ^ 0xffff) }
-    :local FitOneComplement do={ :return (($1 & 0xffff) + ($1 >> 16)) }
-    :local MakeChecksum do={ :return (($1->0) + ($1->1) + ($1->2) + ($1->3) + ($1->4) + ($1->5) + ($1->6) + ($1->7)) }
+    :local funcMakeOneComplement do={ :return ($1 ^ 0xffff) }
+    :local funcFitOneComplement do={ :return (($1 & 0xffff) + ($1 >> 16)) }
+    :local funcMakeChecksum do={ :return (($1->0) + ($1->1) + ($1->2) + ($1->3) + ($1->4) + ($1->5) + ($1->6) + ($1->7)) }
 
-    :local varSrcChecksum [$MakeOneComplement [$FitOneComplement [$MakeChecksum $varSrcFields]]]
-    :local varDstChecksum [$MakeOneComplement [$FitOneComplement [$MakeChecksum $varDstFields]]]
-    :local varAdjustment [$FitOneComplement ($varDstChecksum + [$MakeOneComplement $varSrcChecksum])]
+    :local varSrcChecksum [$funcMakeOneComplement [$funcFitOneComplement [$funcMakeChecksum $varSrcFields]]]
+    :local varDstChecksum [$funcMakeOneComplement [$funcFitOneComplement [$funcMakeChecksum $varDstFields]]]
+    :local varAdjustment [$funcFitOneComplement ($varDstChecksum + [$funcMakeOneComplement $varSrcChecksum])]
 
     :local varNPTAddrFields ($varDstPrefix->"address" | (($varAddr->"address") & [$MakeIP6SuffixMask (128 - $varPrefixLen)]))
     :set varNPTAddrFields ([$StructureIP6Address $varNPTAddrFields detail=yes]->"detail"->"fields")
@@ -267,7 +271,7 @@
             ($varNPTAddrFields->0) ;\
             ($varNPTAddrFields->1) ;\
             ($varNPTAddrFields->2) ;\
-            [$FitOneComplement (($varNPTAddrFields->3) + $varAdjustment)] ;\
+            [$funcFitOneComplement (($varNPTAddrFields->3) + $varAdjustment)] ;\
             ($varNPTAddrFields->4) ;\
             ($varNPTAddrFields->5) ;\
             ($varNPTAddrFields->6) ;\
@@ -283,7 +287,7 @@
         :set varAdjustedNPTAddrFields ({})
         :for fieldIdx from=0 to=7 step=1 do={
             :if ($fieldIdx = $varAdjustmentFieldIdx) do={
-                :set varAdjustedNPTAddrFields ($varAdjustedNPTAddrFields , [$FitOneComplement (($varNPTAddrFields->$fieldIdx) + $varAdjustment)])
+                :set varAdjustedNPTAddrFields ($varAdjustedNPTAddrFields , [$funcFitOneComplement (($varNPTAddrFields->$fieldIdx) + $varAdjustment)])
             } else={
                 :set varAdjustedNPTAddrFields ($varAdjustedNPTAddrFields , $varNPTAddrFields->$fieldIdx)
             }
@@ -398,10 +402,10 @@
 # fields=8193;3512;0;0;0;0;0;1;globalID=2001:db8::;interfaceID=::1;subnetID=::;subtype=gua;type=unicast
 #
 :global StructureIP6AddressDetail do={
+    :global MakeIP6AddressFromFields
     :global MakeIP6FieldsFromAddress
     :global MakeIP6PrefixMask
     :global MakeIP6SuffixMask
-    :global MakeIP6AddressFromFields
 
     :local argAddr ($1->"address")
     :local varFields [$MakeIP6FieldsFromAddress $argAddr]
@@ -573,8 +577,8 @@
 # 2001:db8:0:1110::/60;2001:db8:0:2220::/60
 #
 :global DeduplicateIP6Addresses do={
-    :global GetArrayValues
     :global ExpandIP6Address
+    :global GetArrayValues
     :global StructureIP6AddressCommon
 
     # Dictionary will deduplicate and sort.

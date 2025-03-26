@@ -103,8 +103,9 @@
 # 192.000.002.001
 #
 :global ExpandIPAddress do={
-    :global MakeIPFieldsFromAddress
     :global ExpandIPAddressFromFields
+    :global MakeIPFieldsFromAddress
+
     :return [$ExpandIPAddressFromFields [$MakeIPFieldsFromAddress $1]]
 }
 
@@ -187,7 +188,6 @@
 # 0/25.2.0.192.in-addr.arpa.
 #
 :global MakeIPDomain do={
-    :global MakeIPPrefixMask
     :global MakeIPFieldsFromAddress
     :global StructureIPAddressCommon
 
