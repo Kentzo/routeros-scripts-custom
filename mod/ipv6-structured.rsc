@@ -173,8 +173,9 @@
 # 2001:db8::1
 #
 :global MakeIP6AddressFromFields do={
-    :global ExpandIP6Address
-    :return [:toip6 [$ExpandIP6Address $1]]
+    :global ExpandIP6AddressFromFields
+
+    :return [:toip6 [$ExpandIP6AddressFromFields $1]]
 }
 
 # Make an IPv6 address from a MAC via the EUI-64 method.
