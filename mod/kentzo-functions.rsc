@@ -119,7 +119,11 @@
 # > $AssertNotEmpty argLoopbackInt
 #
 :global AssertNotEmpty do={
-    [[:parse ":global $1; :global LogPrint; :if ([:len \$$1] = 0) do={ \$LogPrint $1 error (\"\\\$$1 cannot be empty\"); :error \"fatal error in kentzo-functions.rsc/AssertNotEmpty\" }"]]
+    :if ([[:parse ":global $1; :return ([:len \$$1] = 0)"]]) do={
+        $LogPrint error $0 ("\$$1 cannot be empty")
+        :error false
+    }
+    :return true
 }
 
 # Remove duplicates from the array.
