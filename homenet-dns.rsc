@@ -454,8 +454,8 @@
 \$INCLUDE data.$zone\n\
 "
             $LogPrint info $varScriptName ("Updating $zone")
-            [$WriteFile $varDBPath $varZoneContents]
-            [$WriteFile $varDataPath $varIncludeContents]
+            $WriteFile $varDBPath $varZoneContents
+            $WriteFile $varDataPath $varIncludeContents
             :set ($varNewState->$zone) ({"serial"=$varNewSerial ; "hash"=$varNewHash})
         } else={
             $LogPrint debug $varScriptName ("Reusing $zone")
@@ -467,18 +467,18 @@
     :foreach file in=[/file/print as-value proplist=name where name~"^$argNSRootPath/db.*"] do={
         :local varPath ($file->"name")
         :if ($varAllDBPaths->$varPath != 1) do={
-            [$RemoveFile $varPath]
+            $RemoveFile $varPath
         }
     }
 
     :foreach file in=[/file/print as-value proplist=name where name~"^$argNSRootPath/data.*"] do={
         :local varPath ($file->"name")
         :if ($varAllDataPaths->$varPath != 1) do={
-            [$RemoveFile $varPath]
+            $RemoveFile $varPath
         }
     }
 
-    [$WriteFile $varStatePath [:serialize value=$varNewState to=json options=json.no-string-conversion]]
+    $WriteFile $varStatePath [:serialize value=$varNewState to=json options=json.no-string-conversion]
 }
 
 :local SetupDNSForwarder do={
