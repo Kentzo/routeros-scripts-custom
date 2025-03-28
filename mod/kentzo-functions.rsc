@@ -201,3 +201,69 @@
     :foreach k,v in=$1 do={ :set varTmp ($varTmp , {$v}) }
     :return $varTmp
 }
+
+# Map values of the array using the given mapping function.
+#
+# $1 (array): An array.
+# [$2] (func): A mapping function, takes one argument; defaults to :tostr
+# [compact] (bool): Whether empty values are removed; defaults to true
+#
+# > :put [$MapArray ({"a"=1;"b"="";3;"";5})]
+# 3;5;1
+#
+:global MapArray do={
+    :local varArr $1
+
+    :local funcTransform $2
+    :if ([:typeof $funcTransform] = "nothing") do={
+        :set funcTransform do={ :return [:tostr $1] }
+    }
+
+    :local varShouldCompact true
+    :if ([:len $compact] != 0) do={
+        :if ([[:parse "[:tobool $compact]"]]) do={
+            :set varShouldCompact true
+        } else={
+            :set varShouldCompact false
+        }
+    }
+
+    :local varResult ({})
+    :foreach item in=$varArr do={
+        :local varTransformedItem [$funcTransform $item]
+        :if ($varShouldCompact = false or [:len $varTransformedItem] > 0) do={
+            :set varResult ($varResult , $varTransformedItem)
+        }
+    }
+
+    :return $varResult
+}
+
+# Concatenate elements of the array, adding the given separator between each element.
+#
+# $1 (array): An array
+# [$2] (str): A separator string; defaults to ","
+# <named arguments of $MapArray>
+#
+# > :put [$JoinArray ({"a"=1;"b"=2;3;4;5})]
+# 3,4,5,1,2
+#
+:global JoinArray do={
+    :local varArr [$MapArray $1 compact=$compact]
+    :local varSep $2
+
+    :if ([:typeof $varSep] = "nothing") do={
+        :set varSep ","
+    }
+
+    :local varResult ""
+    :local varLen [:len $varArr]
+    :local varIdx 0
+    :foreach item in=$varArr do={
+        :set varResult ($varResult . $item)
+        :set varIdx ($varIdx + 1)
+        :if ($varIdx != $varLen) do={ :set varResult ($varResult . $varSep)}
+    }
+
+    :return $varResult
+}
