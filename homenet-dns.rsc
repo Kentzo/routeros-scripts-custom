@@ -22,7 +22,7 @@
 #       - key: Hostname within the domain
 #       - value: An array of IPv4, IPv6 or MAC addresses
 #   - [argIP6DelegatedNetworksExtra] (array): Optional array of IPv6 networks delegated to the router by means other than DHCPv6
-#   - [argEmail] (str): Optional email that overrides global-config's $EmailGeneralTo; defaults to "nobody@invalid"
+#   - [argEmail] (str): Optional email in DNS format; defaults to "nobody.invalid."
 #   - [argTTL] (num): Optional TTL in seconds for DNS resource records; defaults to 3600
 #   - [argIPARPStatusRegex] (str): Optional regex to filter IPv4 ARP when resolving hosts; defaults to "(permanent|reachable|stale)"
 #   - [argIP6NeighborStatusRegex] (str): Optional regex to filter IPv6 neighbors when resolving hosts; defaults to "(noarp|reachable|stale)"
@@ -559,12 +559,8 @@
 :if ([:len $argDomain] = 0) do={ :set argDomain "home.arpa." }
 :if ([:pick $argDomain ([:len $argDomain] - 1)] != ".") do={ :set argDomain ($argDomain . ".")}
 
-# global-config.rsc
-:global EmailGeneralTo
-:local argEmailDefault "nobody@invalid"
-:if ([:len $argEmail] = 0 and [:len $EmailGeneralTo]) do={ :set argEmail $EmailGeneralTo }
+:local argEmailDefault "nobody.invalid."
 :if ([:len $argEmail] = 0) do={ :set argEmail $argEmailDefault }
-:set argEmail [$CharacterReplace $argEmail "@" ("\\.")]
 
 :local argTTLDefault 3600
 :if ([:len $argTTL] = 0 or $argTTL <= 0) do={ :set argTTL $argTTLDefault }
