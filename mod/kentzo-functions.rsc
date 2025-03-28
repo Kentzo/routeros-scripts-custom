@@ -126,6 +126,25 @@
     :return true
 }
 
+# Assert that at least one of given global variables has a non-empty value.
+#
+# $1 (array): An array of variable names.
+#
+# > $AssertAnyOfNotEmpty ({"argNSIPAddress" ; "argNSIP6Address"})
+#
+:global AssertAnyOfNotEmpty do={
+    :global LogPrint
+
+    :foreach name in=$1 do={
+        :if ([[:parse "global $name; :return ([:len \$$name] > 0)"]]) do={
+            :return true
+        }
+    }
+
+    $LogPrint error $0 ("at least one of {$[:tostr $1]} cannot be empty")
+    :error false
+}
+
 # Remove duplicates from the array.
 #
 # $1 (array): An array of items with defined relational operator '='.
