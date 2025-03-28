@@ -37,6 +37,9 @@
 #   - /ip/dns/forwarders
 #   - /ip/dns/static
 #
+# Policy:
+#   - read,sensitive,write
+#
 #
 # Requirements:
 #   - mod/ipv4-structured
