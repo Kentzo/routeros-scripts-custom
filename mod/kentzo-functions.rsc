@@ -99,14 +99,14 @@
     /ipv6/address {
         :retry command={
             :local varAddress [get value-name=address ([find interface=$1 (address in $2) comment~"$3"]->0)]
-            $LogPrint $0 debug ("$varAddress from $2 is available on $1")
+            $LogPrint debug $0 ("$varAddress from $2 is available on $1")
             :return $varAddress
         } on-error={
             :local varWrongAddresses
             :foreach varAddress in=[print as-value proplist=address where interface=$1 comment~"$3"] do={
                 :set varWrongAddresses ($varWrongAddresses . " $($varAddress->address)")
             }
-            $LogPrint $0 error ("expected an address from $2 on $1, got ($varWrongAddresses) instead")
+            $LogPrint error $0 ("expected an address from $2 on $1, got ($varWrongAddresses) instead")
             :error "fatal error in kentzo-functions.rsc/WaitIP6Address"
         } delay=1 max=5
     }
