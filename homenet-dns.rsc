@@ -546,6 +546,7 @@
 :global argZonesExtra
 
 :global AssertNotEmpty
+:global AssertAnyOfNotEmpty
 :global CharacterReplace
 :global LogPrint
 
@@ -575,8 +576,7 @@
 :if ([:len $argInterfacesRegex] = 0) do={ :set argInterfacesRegex $argInterfacesRegexDefault }
 
 $AssertNotEmpty "argNSRootPath"
-$AssertNotEmpty "argNSIPAddress"
-$AssertNotEmpty "argNSIP6Address"
+$AssertAnyOfNotEmpty ({"argNSIPAddress" ; "argNSIP6Address"})
 $AssertNotEmpty "argManagedID"
 
 :do {
