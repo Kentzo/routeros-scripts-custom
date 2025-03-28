@@ -454,8 +454,7 @@
 \$TTL $argTTL\n\
 @ IN SOA @ $argEmail $varNewSerial 3600 1200 604800 $argTTL\n\
 @ NS @\n\
-\$INCLUDE data.$zone\n\
-"
+\$INCLUDE data.$zone\n"
             $LogPrint info $varScriptName ("Updating $zone")
             $WriteFile $varDBPath $varZoneContents
             $WriteFile $varDataPath $varIncludeContents
@@ -485,6 +484,7 @@
 }
 
 :local SetupDNSForwarder do={
+    :global JoinArray
     :global SetIfExistsElseAdd
     :global argManagedID
     :global argNSIPAddress
@@ -495,23 +495,23 @@
 
     $SetIfExistsElseAdd /ip/dns/forwarders\
         ({"comment~\"$argManagedID\\\$\""})\
-        ({\
-            "name"="homenet-dns";\
-            "dns-servers"="$argNSIPAddress,$argNSIP6Address";\
-            "comment"="\"Managed: homenet-dns / $argManagedID\""\
+        ({
+            "name"="homenet-dns";
+            "dns-servers"=[$JoinArray ({$argNSIPAddress;$argNSIP6Address})];
+            "comment"="\"Managed: homenet-dns / $argManagedID\""
         })
 
     :foreach zone,contents in=$argZones do={
         :local varEntryName [:pick $zone 0 ([:len $zone] - 1)]
         $SetIfExistsElseAdd /ip/dns/static\
             ({"comment~\"$argManagedID\\\$\"" ; "name"="$varEntryName" ; "type"="FWD"})\
-            ({\
-                "name"="$zone";\
-                "type"="FWD";\
-                "forward-to"="homenet-dns";\
-                "match-subdomain"="yes";\
-                "ttl"=("$argTTL" . "s");\
-                "comment"="\"Managed: homenet-dns / $argManagedID\""\
+            ({
+                "name"="$zone";
+                "type"="FWD";
+                "forward-to"="homenet-dns";
+                "match-subdomain"="yes";
+                "ttl"=("$argTTL" . "s");
+                "comment"="\"Managed: homenet-dns / $argManagedID\""
             })
     }
 
@@ -589,5 +589,5 @@ $AssertNotEmpty "argManagedID"
 } on-error={
     $TearDown
     $LogPrint error $varScriptName ("Failed to set up Homenet DNS")
-    :error "fatal error in homenet-dns.rsc"
+    :error false
 }
