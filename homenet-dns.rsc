@@ -46,6 +46,8 @@
 :global GlobalFunctionsReady;
 :while ($GlobalFunctionsReady != true) do={ :delay 500ms; }
 
+:global varScriptName [:jobname]
+
 
 # Sorted by "address" for binary search.
 :global constRFC6303IPDomainsLookupTable {
