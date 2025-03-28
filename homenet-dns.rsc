@@ -394,7 +394,7 @@
     }
 }
 
-:global SetupZoneFiles do={
+:local SetupZoneFiles do={
     :global LogPrint
     :global RemoveFile
     :global WriteFile
@@ -507,7 +507,6 @@
                 "type"="FWD";\
                 "forward-to"="homenet-dns";\
                 "match-subdomain"="yes";\
-                "disabled"="yes";\
                 "ttl"=("$argTTL" . "s");\
                 "comment"="\"Managed: homenet-dns / $argManagedID\""\
             })
@@ -548,6 +547,7 @@
 
 :global AssertNotEmpty
 :global CharacterReplace
+:global LogPrint
 
 # global-config.rsc
 :global Domain
@@ -585,6 +585,6 @@ $AssertNotEmpty "argManagedID"
     $SetupDNSForwarder $varZones
 } on-error={
     $TearDown
-    $LogPrint error $0 ("Failed to set up Homenet DNS")
+    $LogPrint error $varScriptName ("Failed to set up Homenet DNS")
     :error "fatal error in homenet-dns.rsc"
 }
