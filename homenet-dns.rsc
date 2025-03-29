@@ -157,12 +157,15 @@
     {"network"=2001:0db8::/32 ; "address"=2001:0db8:: ; "domain"="8.b.d.0.1.0.0.2.ip6.arpa."};
 }
 
-:global constIANADomains {
-    {"domain"="home.arpa."};
-    {"domain"="internal."};
-    {"domain"="invalid."};
-    {"domain"="resolver.arpa."};
+:global constReservedDomains {
+    {"domain"="example."}; # RFC2606
+    {"domain"="home.arpa."}; # RFC8375
+    {"domain"="internal."}; # draft-ietf-dnssd-srp
+    {"domain"="invalid."}; # RFC2606
+    {"domain"="localhost."}; # RFC2606
+    {"domain"="resolver.arpa."}; # RFC9462
     {"domain"="service.arpa."};
+    {"domain"="test."}; # RFC2606
 }
 
 # Sorted by "address" for binary search.
@@ -220,7 +223,7 @@
 
 :global FindZoneDomain do={
     :global FindZoneDomainInLookupTable
-    :global constIANADomains
+    :global constReservedDomains
     :global constRFC6303IP6DomainsLookupTable
     :global constRFC6303IPDomainsLookupTable
     :global varIP6DelegatedPrefixDomainsLookupTable
@@ -239,7 +242,7 @@
     }
 
     :if ([:typeof $argOwner] = "str") do={
-        :foreach item in=$constIANADomains do={
+        :foreach item in=$constReservedDomains do={
             :local varDomain ($item->"domain")
             :if ($argOwner=$varDomain or $argOwner~".$varDomain\$") do={
                 :return $varDomain
@@ -323,7 +326,7 @@
     :global MakeRelativeDomain
     :global ResolveHost
     :global argDomain
-    :global constIANADomains
+    :global constReservedDomains
     :global constRFC6303IP6DomainsLookupTable
     :global constRFC6303IPDomainsLookupTable
     :global varIP6DelegatedPrefixDomainsLookupTable
@@ -334,7 +337,7 @@
     :local varZones ({})
     :foreach item in=$constRFC6303IPDomainsLookupTable do={ :local domain ($item->"domain") ; :set ($varZones->$domain) ({} , $argZonesExtra->$domain) }
     :foreach item in=$constRFC6303IP6DomainsLookupTable do={ :local domain ($item->"domain") ; :set ($varZones->$domain) ({} , $argZonesExtra->$domain) }
-    :foreach item in=$constIANADomains do={ :local domain ($item->"domain") ; :set ($varZones->$domain) ({} , $argZonesExtra->$domain) }
+    :foreach item in=$constReservedDomains do={ :local domain ($item->"domain") ; :set ($varZones->$domain) ({} , $argZonesExtra->$domain) }
     :foreach item in=$varIP6DelegatedPrefixDomainsLookupTable do={ :local domain ($item->"domain") ; :set ($varZones->$domain) ({} , $argZonesExtra->$domain) }
 
     foreach name,addresses in=$argHosts do={
