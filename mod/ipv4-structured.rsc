@@ -168,6 +168,21 @@
     :return {"address"=$varAddr ; "addressPrefix"=$varAddrPrefix ; "prefix"=$varPrefix ; "prefixLength"=$varPrefixLen ; "prefixMask"=$varPrefixMask}
 }
 
+# Make a structure from an IPv4 address.
+#
+# - $1 (ip4, str): IPv4 address
+#   [$2] (integer): subnet prefix length; defaults to 32
+#   [detail] (bool): Whether to include details; defaults to false
+#
+# - $1 (str, ip-prefix): IPv4 address-prefix
+#   [detail] (bool): Whether to include details; defaults to false
+#
+:global StructureIPAddress do={
+    :global StructureIPAddressCommon
+
+    :return [$StructureIPAddressCommon $1 $2]
+}
+
 # Make an RFC1035 domain from an IPv4 address.
 #
 # - $1 (ip, str): IPv4 address
