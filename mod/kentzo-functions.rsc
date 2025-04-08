@@ -176,6 +176,33 @@
     :return $varArray
 }
 
+# Remove duplicates from an array of strings.
+#
+# $1 (array): An array of strings.
+# [compact] (bool): Whether empty values are removed; defaults to true
+#
+# > :put [$DeduplicateStrArray ({"1";"2";"3";"1"})]
+# "1";"2";"3"
+#
+:global DeduplicateStrArray do={
+    :global GetArrayKeys
+
+    :local varShouldCompact true
+    :if ([:len $compact] != 0) do={
+        :if ([[:parse "[:tobool $compact]"]] = false) do={
+            :set varShouldCompact false
+        }
+    }
+
+    :local varTmp ({})
+    :foreach varI in=$1 do={
+        :if ($varShouldCompact = false or [:len $varI] > 0) do={
+            :set ($varTmp->$varI) 1
+        }
+    }
+    :return [$GetArrayKeys $varTmp]
+}
+
 # Get all keys of an array.
 #
 # $1 (array): An array.
