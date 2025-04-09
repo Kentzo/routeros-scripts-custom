@@ -23,13 +23,13 @@
         }
     }
     :local varResult
-    :do {
-        $LogPrint debug $0 ("> $varCommand")
+    :onerror varError in={
+        $LogPrint debug ("$[:jobname]/$0") ("> $varCommand")
         :set varResult [[:parse $varCommand]]
-        $LogPrint debug $0 ("  $[:tostr $varResult]")
-    } on-error={
-        $LogPrint error $0 ("`$varCommand` failed")
-        :error "fatal error in kentzo-functions.rsc/RunCommandFromArray"
+        $LogPrint debug ("$[:jobname]/$0") ("  $[:tostr $varResult]")
+    } do={
+        $LogPrint error ("$[:jobname]/$0") ("`$varCommand` failed: $varError")
+        :error false
     }
     :return $varResult
 }
@@ -71,13 +71,13 @@
     :if ($varExisting) do={
         :foreach k,v in=$3 do={
             :if ([:typeof $k] = "num") do={
-                $LogPrint error $0 ("equality criteria cannot have non-key elements")
-                :error "fatal error in kentzo-functions.rsc/SetIfExistsElseAddUnlessEqual"
+                $LogPrint error ("$[:jobname]/$0") ("equality criteria cannot have non-key elements")
+                :error false
             }
             :local left ($varExisting->$k)
             :local right $v
             :if ($left != $right) do={
-                $LogPrint debug $0 ("\"$k\": $left != $right")
+                $LogPrint debug ("$[:jobname]/$0") ("\"$k\": $left != $right")
                 $RunCommandFromArray ("$1/set") ($4 , {numbers=($varExisting->".id")})
             }
         }
@@ -99,15 +99,15 @@
     /ipv6/address {
         :retry command={
             :local varAddress [get value-name=address ([find interface=$1 (address in $2) comment~"$3"]->0)]
-            $LogPrint debug $0 ("$varAddress from $2 is available on $1")
+            $LogPrint debug ("$[:jobname]/$0") ("$varAddress from $2 is available on $1")
             :return $varAddress
         } on-error={
             :local varWrongAddresses
             :foreach varAddress in=[print as-value proplist=address where interface=$1 comment~"$3"] do={
                 :set varWrongAddresses ($varWrongAddresses . " $($varAddress->address)")
             }
-            $LogPrint error $0 ("expected an address from $2 on $1, got ($varWrongAddresses) instead")
-            :error "fatal error in kentzo-functions.rsc/WaitIP6Address"
+            $LogPrint error ("$[:jobname]/$0") ("expected an address from $2 on $1, got ($varWrongAddresses) instead")
+            :error false
         } delay=1 max=5
     }
 }
@@ -120,7 +120,7 @@
 #
 :global AssertNotEmpty do={
     :if ([[:parse ":global $1; :return ([:len \$$1] = 0)"]]) do={
-        $LogPrint error $0 ("\$$1 cannot be empty")
+        $LogPrint error ("$[:jobname]/$0") ("\$$1 cannot be empty")
         :error false
     }
     :return true
@@ -141,7 +141,7 @@
         }
     }
 
-    $LogPrint error $0 ("at least one of {$[:tostr $1]} cannot be empty")
+    $LogPrint error ("$[:jobname]/$0") ("at least one of {$[:tostr $1]} cannot be empty")
     :error false
 }
 
