@@ -28,8 +28,7 @@
         :set varResult [[:parse $varCommand]]
         $LogPrint debug ("$[:jobname]/$0") ("  $[:tostr $varResult]")
     } do={
-        $LogPrint error ("$[:jobname]/$0") ("`$varCommand` failed: $varError")
-        :error false
+        :error ("`$varCommand` failed: $varError")
     }
     :return $varResult
 }
@@ -71,8 +70,7 @@
     :if ($varExisting) do={
         :foreach k,v in=$3 do={
             :if ([:typeof $k] = "num") do={
-                $LogPrint error ("$[:jobname]/$0") ("equality criteria cannot have non-key elements")
-                :error false
+                :error ("equality criteria cannot have non-key elements")
             }
             :local left ($varExisting->$k)
             :local right $v
@@ -106,8 +104,7 @@
             :foreach varAddress in=[print as-value proplist=address where interface=$1 comment~"$3"] do={
                 :set varWrongAddresses ($varWrongAddresses . " $($varAddress->address)")
             }
-            $LogPrint error ("$[:jobname]/$0") ("expected an address from $2 on $1, got ($varWrongAddresses) instead")
-            :error false
+            :error ("expected an address from $2 on $1, got ($varWrongAddresses) instead")
         } delay=1 max=5
     }
 }
@@ -119,11 +116,11 @@
 # > $AssertNotEmpty argLoopbackInt
 #
 :global AssertNotEmpty do={
-    :if ([[:parse ":global $1; :return ([:len \$$1] = 0)"]]) do={
-        $LogPrint error ("$[:jobname]/$0") ("\$$1 cannot be empty")
-        :error false
+    :if ([[:parse ":global $1; :return ([:len \$$1] > 0)"]]) do={
+        :return true
     }
-    :return true
+
+    :error ("\$$1 cannot be empty")
 }
 
 # Assert that at least one of given global variables has a non-empty value.
@@ -141,8 +138,7 @@
         }
     }
 
-    $LogPrint error ("$[:jobname]/$0") ("at least one of {$[:tostr $1]} cannot be empty")
-    :error false
+    :error ("at least one of {$[:tostr $1]} cannot be empty")
 }
 
 # Remove duplicates from the array.
