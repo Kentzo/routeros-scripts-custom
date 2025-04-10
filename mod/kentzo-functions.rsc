@@ -252,10 +252,14 @@
     }
 
     :local varResult ({})
-    :foreach item in=$varArr do={
-        :local varTransformedItem [$funcTransform $item]
+    :foreach varI in=$varArr do={
+        :local varTransformedItem [$funcTransform $varI]
         :if ($varShouldCompact = false or [:len $varTransformedItem] > 0) do={
-            :set varResult ($varResult , $varTransformedItem)
+            :if ([:typeof $varTransformedItem] = "array") do={
+                :set varResult ($varResult , {$varTransformedItem})
+            } else={
+                :set varResult ($varResult , $varTransformedItem)
+            }
         }
     }
 
