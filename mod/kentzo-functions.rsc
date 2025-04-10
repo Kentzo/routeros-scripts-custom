@@ -276,6 +276,8 @@
 # 3,4,5,1,2
 #
 :global JoinArray do={
+    :global MapArray
+
     :local varArr [$MapArray $1 compact=$compact]
     :local varSep $2
 
