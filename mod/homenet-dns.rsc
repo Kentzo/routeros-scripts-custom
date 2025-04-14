@@ -1216,7 +1216,7 @@
         :set ($varConfig->"ip6NetworksExtra") [($HomenetDNS->"MakeDefaultIP6NetworksExtra") $varConfig]
     }
 
-    :local cfgUseDNSForwarderDefault yes
+    :local cfgUseDNSForwarderDefault [/ip/dns/get allow-remote-requests]
     :local cfgUseDNSForwarder ($HomenetDNSConfig->"useDNSForwarder")
     :if ([:typeof $cfgUseDNSForwarder] = "nothing") do={
         :set cfgUseDNSForwarder $cfgUseDNSForwarderDefault
