@@ -244,9 +244,7 @@
 
     :local varShouldCompact true
     :if ([:len $compact] != 0) do={
-        :if ([[:parse "[:tobool $compact]"]]) do={
-            :set varShouldCompact true
-        } else={
+        :if ([[:parse "[:tobool $compact]"]] = false) do={
             :set varShouldCompact false
         }
     }
@@ -288,8 +286,8 @@
     :local varResult ""
     :local varLen [:len $varArr]
     :local varIdx 0
-    :foreach item in=$varArr do={
-        :set varResult ($varResult . $item)
+    :foreach varI in=$varArr do={
+        :set varResult ($varResult . $varI)
         :set varIdx ($varIdx + 1)
         :if ($varIdx != $varLen) do={ :set varResult ($varResult . $varSep)}
     }
