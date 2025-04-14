@@ -280,7 +280,7 @@
     }
 }
 
-:set ($HomenetDNS->"NormalizeDomain") do={
+:set ($HomenetDNS->"QualifyDomain") do={
     :local argDomain $0
     :local argDefaultDomain $1
 
@@ -1158,7 +1158,7 @@
     :if ([:len $cfgDomain] = 0 and [:len $Domain] > 0) do={
         :set cfgDomain $Domain
     }
-    :set cfgDomain [($HomenetDNS->"NormalizeDomain") $cfgDomain $cfgDomainDefault]
+    :set cfgDomain [($HomenetDNS->"QualifyDomain") $cfgDomain $cfgDomainDefault]
     :set ($varConfig->"domain") $cfgDomain
 
     :local cfgTTL ($HomenetDNSConfig->"ttl")
@@ -1191,14 +1191,14 @@
 
     :local cfgHosts ({})
     :foreach varI in=($HomenetDNSConfig->"hosts") do={
-        :set ($varI->"domain") [($HomenetDNS->"NormalizeDomain") ($varI->"domain") $cfgDomain]
+        :set ($varI->"domain") [($HomenetDNS->"QualifyDomain") ($varI->"domain") $cfgDomain]
         :set cfgHosts ($cfgHosts , {$varI})
     }
     :set ($varConfig->"hosts") $cfgHosts
 
     :local cfgServices ({})
     :foreach varI in=($HomenetDNSConfig->"services") do={
-        :set ($varI->"domain") [($HomenetDNS->"NormalizeDomain") ($varI->"domain") $cfgDomain]
+        :set ($varI->"domain") [($HomenetDNS->"QualifyDomain") ($varI->"domain") $cfgDomain]
         :set cfgServices ($cfgServices , {$varI})
     }
     :set ($varConfig->"services") $cfgServices
