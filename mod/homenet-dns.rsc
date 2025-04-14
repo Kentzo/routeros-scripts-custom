@@ -1,21 +1,32 @@
 #!rsc by RouterOS
 
-# Homenet authoritative-only nameserver with DNS-Based Service Discovery
+# Homenet authoritative nameserver with DNS-Based Service Discovery
 #
 # - Authoritative answers for IANA's Locally-Served DNS Zones (RFC 6303) and delegated IPv6 prefixes
-#   that avoid leakage of queries to the upstream
-# - DNS-Based Service Discovery
+#   that avoid leakage of queries to the upstream DNS resolver
+# - Support for Wide-Area DNS-Based Service Discovery (aka Wide-Area Bonjour)
+# - Powered by CoreDNS: flexible, lightweight and extendable DNS server
+#
+# For each item in "hosts" you provide a hostname and at least one IPv4 or IPv6 address that is used for the corresponding "A"
+# or "AAAA" resource record. Additional IP addresses and MAC addresses are used to gather a comprehensive list of PTR records.
+# Router's local interfaces as well as ARP and ND tables are considered. Setting "ipARPStatusRegex", "ip6NeighborStatusRegex"
+# and "interfacesRegex" narrows the seach.
+#
+# For each item in "services" you provide instance and service names, hostname and port as well as contents for the corresponding
+# TXT record(s) as needed. Values must follow encodings and constraints as specified in RFC 6763, speficially Sections 4 and 6.
+#
+# The list of locally-served zones includes IANA assignments as well as "ipNetworksExtra", "ip6NetworksExtra" and "domainsExtra".
+# Queries for these domains (and subdomains) will be authoritatively answered by the nameserver. NXDOMAIN will be returned
+# for names that do exist.
 #
 # Each zone is represented by two files: "db.*" with SOA and NS that $INCLUDEs "data.*" with the remaining resource records.
 # This separation allows the script to minimize disk writes and avoid unnecessary container restarts by maintaing hashes of
 # all data files in the "state.json" file.
 #
-# For each item in "hosts" you provide a hostname and at least one IPv4 or IPv6 address that is used for the corresponding "A"
-# or "AAAA" resource record. Additional IP addresses and MAC addresses are used to gather a comprehensive list of PTR records.
-# Router's local interfaces as well as ARP and ND tables are considered in the search.
+# By default the script checks whether RouterOS's DNS Resolver is set to allow remote requests and if so a forwarder will be set up.
 #
-# For each item in "services" you provide instance and service names, hostname and port as well as contents for the corresponding TXT record(s).
-# Values must follow encodings and constraints as specified in RFC 6763, speficially Sections 4 and 6:
+# Additional zones and resource records can be set verbatim via "zonesExtra". Additional CoreDNS configuration can be set via
+# "corefileExtra".
 #
 # $HomenetDNSConfig:
 #   - managedID (str): Regex-escaped unique ID of the managed objects
@@ -38,7 +49,7 @@
 #       - [txt]: Optional TXT record(s) associated with the service instance
 #           - {str}: one TXT record with multiple values, e.g. {"path"="/usb1-part2/media" ; "u=guest"} -> TXT ("path=/usb1-part2/media" "u=guest")
 #           - {{str}}: Multiple TXT records where each follows the rule above
-#   - [useDNSForwarder] (bool): Option flag to control whether /ip/dns/forwdarder for all configured zones is set up; defaults to yes
+#   - [useDNSForwarder] (bool): Option flag to control whether /ip/dns/forwdarder for all configured zones is set up; defaults to `/ip/dns`'s allow-remote-requests
 #   - [ipARPStatusRegex] (str): Optional regex to filter IPv4 ARP when resolving hosts; defaults to "(permanent|reachable|stale)"
 #   - [ip6NeighborStatusRegex] (str): Optional regex to filter IPv6 neighbors when resolving hosts; defaults to "(noarp|reachable|stale)"
 #   - [interfacesRegex] (str): Optional regex to filter interfaces when resolving addresses of hosts and delegated networks; defaults to ".*"
@@ -64,17 +75,30 @@
 #   - mod/ipv6-structured
 #   - mod/kentzo-functions
 #
+# Caveats and Known Bugs:
+#   - RouterOS (7.18.2) returns incorrect IPv6 address for a veth interface: specify manually
+#   - RouterOS's (7.18.2) DNS Resolver rewrites NXDOMAIN responses from a forwarder as NODATA and removes the authority section
+#   - macOS (15.4) cannot discover services over unicast DNS when iCloud Private Relay is on
+#   - When using TLS in CoreDNS, make sure that the container image is built with up to date CA certificates
 #
+# Example:
 # > :global HomenetDNSConfig {
-#       "managedID"="01234567-0123-0123-0123-0123456789ab";
-#       "nsContainer"="coredns";
-#       "hosts"=({
-#           {"name"="gateway" ; "addresses"={192.0.2.1 ; 2001:db8::1}}
-#       });
-#       "services"=({
-#       });
+#       "managedID"="4e0515dc-675b-4c49-8931-27b0194a6500";
+#       "nsContainer"="5d660e04-56ad-4454-990b-d10d57506e5c";
+#       "hosts"={
+#           {"name"="gateway" ; "addresses"={192.0.2.1 ; 2001:db8::1}};
+#       };
+#       "services"={
+#           {"name"="Media" ; "service"="_smb._tcp" ; "host"="samba" ; "port"=445 ; txt={"path=/media" ; "u"="guest"}};
+#       };
+#       "zonesExtra"={
+#           "home.arpa."={
+#               "samba CNAME gateway";
+#           };
+#       };
 #   }
-# > /system/scripts/run homenet-dns use-script-permissions
+# > :global HomenetDNS
+# > ($HomenetDNS->"Main")
 
 :global HomenetDNS
 :global HomenetDNSConfig
@@ -357,7 +381,6 @@
     :return $varNetworks
 }
 
-# Find zone origin for the given IP address.
 :set ($HomenetDNS->"FindZoneOriginInLookupTable") do={
     :local argLookupTable $0
     :local argAddress $1
@@ -388,7 +411,6 @@
     }
 }
 
-# Find zone origin for the given IP address or domain.
 :set ($HomenetDNS->"FindZoneOrigin") do={
     :global HomenetDNS
 
@@ -784,7 +806,6 @@
     :local cfgNSIP6Address ($varConfig->"nsIP6Address")
     :local cfgZonesExtra ($varConfig->"zonesExtra")
 
-    # At least each domain reserved by RFC 6303 / IANA as well as user's config has a zone.
     :local varZones ({})
     :local varItems ($HomenetDNS->"constRFC6303IPDomainsLookupTable",\
         $HomenetDNS->"constRFC6303IP6DomainsLookupTable",\
@@ -805,7 +826,7 @@
         :set ($varZones->$varK) ($varZones->$varK , $varV)
     }
 
-    # Add PTR recrods for reverse IP lookup of zones that have resource records.
+    # Add PTR recrods for reverse IP lookup of nameservers of zones that have resource records.
     :local varNSIPOrigin
     :local varNSIPOwner
     :if ([:len $cfgNSIPAddress]) do={
@@ -912,8 +933,7 @@
     }
 
     # Generate DNS-SD rule for CoreDNS.
-    # The rewrite rule redirects all requests for DNS-SD auxiliary subdomains to $cfgDomain. This allows
-    # to handle in one zone file.
+    # The rewrite rule redirects all requests for DNS-SD auxiliary subdomains to $cfgDomain. This allows handling in one zone file.
     :local varDNSSDPath "$cfgNSRoot/Corefile.dns-sd"
     :local varDNSSDContents "rewrite stop name regex ^(b|db|lb)\\._dns-sd\\._udp\\.(.*)\$ {1}._dns-sd._udp.$cfgDomain answer auto\n"
     :local varDNSSDOldHash ($varOldState->"Corefile.dns-sd"->"hash")
