@@ -155,8 +155,10 @@
 #   > /ipv6/address/add address=2001:db8:53::/127 advertise=no interface=veth-coredns no-dad=yes
 #   > /container/mounts/add dst=/etc/coredns/ name=coredns src=/usb1-part2/coredns/config
 #   > /container/add file=routeros_coredns.tar.gz interface=veth-coredns root-dir=usb1-part2/coredns/root mounts=coredns workdir=/ logging=yes start-on-boot=yes
-#   > /container/start [find where interface=veth-coredns]
+#   > /container/print where interface=veth-coredns; # note container name in the output
 #   > /system/script/add name=SetupHomenetDNS source=[/file/get SetupHomenetDNS.rsc contents] policy=read,write,sensitive
+#   > /system/script/edit SetupHomenetDNS value-name=source; # set "nsContainer" to the container name
+#   > /system/script/run SetupHomenetDNS
 #   > /system/scheduler/add name=UpdateHomenetDNS interval=24h on-event=SetupHomenetDNS policy=read,write,sensitive
 
 :global HomenetDNS
