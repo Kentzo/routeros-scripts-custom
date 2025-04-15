@@ -83,7 +83,7 @@
 #
 # Example:
 #   # On the Host
-#   $ docker build -t routeros_coredns:latest -f - . <<END
+#   $ docker build -t routeros_coredns:latest -f - . <<'END'
 #       FROM --platform=$BUILDPLATFORM golang:1.23.8 AS build
 #       WORKDIR /src
 #       ADD https://github.com/coredns/coredns.git\#v1.12.1 /src
@@ -120,25 +120,44 @@
 #       END
 #   $ docker save routeros/coredns:latest | gzip > routeros_coredns.tar.gz
 #   $ scp routeros_coredns.tar.gz <router-address>:/
+#   $ cat << 'END' > SetupHomenetDNS.rsc
+#       :local varJobName [:jobname]
+#
+#       :global GlobalFunctionsReady;
+#       :while ($GlobalFunctionsReady != true) do={ :delay 500ms; }
+#
+#       :global ScriptLock
+#       :if ([$ScriptLock $varJobName] = false) do={ :error false }
+#
+#       :global HomenetDNS
+#       :global HomenetDNSConfig {
+#           "managedID"="...";
+#           "nsContainer"="...";
+#           "hosts"={
+#               {"name"="gateway" ; "addresses"={192.0.2.1 ; 2001:db8::1}};
+#           };
+#           "services"={
+#               {"name"="Media" ; "service"="_smb._tcp" ; "host"="samba" ; "port"=445 ; txt={"path=/media" ; "u"="guest"}};
+#           };
+#           "zonesExtra"={
+#               "home.arpa."={
+#                   "samba CNAME gateway";
+#               };
+#           };
+#       }
+#       ($HomenetDNS->"Main")
+#     END
+#   $ scp SetupHomenetDNS.rsc <router-address>:/
 #
 #   # On the Router
-#   > :global HomenetDNSConfig {
-#         "managedID"="4e0515dc-675b-4c49-8931-27b0194a6500";
-#         "nsContainer"="5d660e04-56ad-4454-990b-d10d57506e5c";
-#         "hosts"={
-#             {"name"="gateway" ; "addresses"={192.0.2.1 ; 2001:db8::1}};
-#         };
-#         "services"={
-#             {"name"="Media" ; "service"="_smb._tcp" ; "host"="samba" ; "port"=445 ; txt={"path=/media" ; "u"="guest"}};
-#         };
-#         "zonesExtra"={
-#             "home.arpa."={
-#                 "samba CNAME gateway";
-#             };
-#         };
-#     }
-#   > :global HomenetDNS
-#   > ($HomenetDNS->"Main")
+#   > /interface/veth/add address=192.0.2.53/31,2001:db8:53::1/127 gateway=192.0.2.52 gateway6=2001:db8:53:: name=veth-coredns
+#   > /ip/address/add address=192.0.2.52/31 interface=veth-coredns
+#   > /ipv6/address/add address=2001:db8:53::/127 advertise=no interface=veth-coredns no-dad=yes
+#   > /container/mounts/add dst=/etc/coredns/ name=coredns src=/usb1-part2/coredns/config
+#   > /container/add file=routeros_coredns.tar.gz interface=veth-coredns root-dir=usb1-part2/coredns/root mounts=coredns workdir=/ logging=yes start-on-boot=yes
+#   > /container/start [find where interface=veth-coredns]
+#   > /system/script/add name=SetupHomenetDNS source=[/file/get SetupHomenetDNS.rsc contents] policy=read,write,sensitive
+#   > /system/scheduler/add name=UpdateHomenetDNS interval=24h on-event=SetupHomenetDNS policy=read,write,sensitive
 
 :global HomenetDNS
 :global HomenetDNSConfig
