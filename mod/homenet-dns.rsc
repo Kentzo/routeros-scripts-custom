@@ -82,23 +82,63 @@
 #   - When using TLS in CoreDNS, make sure that the container image is built with up to date CA certificates
 #
 # Example:
-# > :global HomenetDNSConfig {
-#       "managedID"="4e0515dc-675b-4c49-8931-27b0194a6500";
-#       "nsContainer"="5d660e04-56ad-4454-990b-d10d57506e5c";
-#       "hosts"={
-#           {"name"="gateway" ; "addresses"={192.0.2.1 ; 2001:db8::1}};
-#       };
-#       "services"={
-#           {"name"="Media" ; "service"="_smb._tcp" ; "host"="samba" ; "port"=445 ; txt={"path=/media" ; "u"="guest"}};
-#       };
-#       "zonesExtra"={
-#           "home.arpa."={
-#               "samba CNAME gateway";
-#           };
-#       };
-#   }
-# > :global HomenetDNS
-# > ($HomenetDNS->"Main")
+#   # On the Host
+#   $ docker build -t routeros_coredns:latest -f - . <<END
+#       FROM --platform=$BUILDPLATFORM golang:1.23.8 AS build
+#       WORKDIR /src
+#       ADD https://github.com/coredns/coredns.git\#v1.12.1 /src
+#       COPY <<EOF /src/plugin.cfg
+#       errors:errors
+#       log:log
+#       cache:cache
+#       rewrite:rewrite
+#       auto:auto
+#       forward:forward
+#       template:template
+#       EOF
+#       RUN sh -c 'GOFLAGS="-buildvcs=false" make gen && GOFLAGS="-buildvcs=false" make'
+#
+#       FROM --platform=$TARGETPLATFORM gcr.io/distroless/static-debian12
+#       COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+#       COPY --from=build /src/coredns /bin/coredns
+#       COPY <<EOF /Corefile
+#       . {
+#           errors
+#
+#           import /etc/coredns/Corefile.user
+#           import /etc/coredns/Corefile.dns-sd
+#           auto {
+#               directory /etc/coredns/zones
+#           }
+#           template ANY ANY {
+#               rcode REFUSED
+#           }
+#       }
+#       EOF
+#       WORKDIR /
+#       ENTRYPOINT ["/bin/coredns"]
+#       END
+#   $ docker save routeros/coredns:latest | gzip > routeros_coredns.tar.gz
+#   $ scp routeros_coredns.tar.gz <router-address>:/
+#
+#   # On the Router
+#   > :global HomenetDNSConfig {
+#         "managedID"="4e0515dc-675b-4c49-8931-27b0194a6500";
+#         "nsContainer"="5d660e04-56ad-4454-990b-d10d57506e5c";
+#         "hosts"={
+#             {"name"="gateway" ; "addresses"={192.0.2.1 ; 2001:db8::1}};
+#         };
+#         "services"={
+#             {"name"="Media" ; "service"="_smb._tcp" ; "host"="samba" ; "port"=445 ; txt={"path=/media" ; "u"="guest"}};
+#         };
+#         "zonesExtra"={
+#             "home.arpa."={
+#                 "samba CNAME gateway";
+#             };
+#         };
+#     }
+#   > :global HomenetDNS
+#   > ($HomenetDNS->"Main")
 
 :global HomenetDNS
 :global HomenetDNSConfig
