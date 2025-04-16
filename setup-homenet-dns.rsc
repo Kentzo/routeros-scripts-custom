@@ -1,3 +1,5 @@
+#!rsc by RouterOS
+
 :global GlobalFunctionsReady;
 :while ($GlobalFunctionsReady != true) do={ :delay 500ms; }
 
