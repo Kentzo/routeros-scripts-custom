@@ -986,7 +986,7 @@
     # Prepare Corefile
     :local varMainPath "$cfgNSRoot/Corefile"
     :local varMainContents $cfgCorefileOverride
-    :if ([:len $varMainContents] = 0) do={
+    :if ([:typeof $cfgCorefileOverride] = "nothing") do={
         :set varMainContents "\
 . {\n\
 \_   errors\n\
@@ -1000,6 +1000,8 @@
 \_       rcode REFUSED\n\
 \_   }\n\
 }"
+    } else={
+        :set varMainContents [:tostr $cfgCorefileOverride]
     }
     :local varMainOldHash ($varOldState->"Corefile"->"hash")
     :local varMainNewHash [:convert $varMainContents transform=md5]
@@ -1276,7 +1278,7 @@
     :set ($varConfig->"useDNSForwarder" $cfgUseDNSForwarder)
 
     :set ($varConfig->"corefileExtra") [:tostr ($HomenetDNSConfig->"corefileExtra")]
-    :set ($varConfig->"corefileOverride") [:tostr ($HomenetDNSConfig->"corefileOverride")]
+    :set ($varConfig->"corefileOverride") ($HomenetDNSConfig->"corefileOverride")
 
     :set ($varState->"varConfig") $varConfig
 
