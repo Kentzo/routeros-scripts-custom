@@ -59,7 +59,8 @@
 #   - [zonesExtra] (array): Optional array of additional resource records
 #       - key: Zone domain name
 #       - value: An array of additional resource records to append to the zone file
-#   - [corefileExtra] (str): Optional additional configuration for CoreDNS, passed verbatim
+#   - [corefileExtra] (str): Optional additional CoreDNS configuration for the main server block, passed verbatim
+#   - [corefileOverride] (str): Optional CoreDNS configuration override, passed verbatim
 #
 # Affects:
 #   - /container
@@ -101,53 +102,11 @@
 #       FROM --platform=$TARGETPLATFORM gcr.io/distroless/static-debian12
 #       COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 #       COPY --from=build /src/coredns /bin/coredns
-#       COPY <<EOF /Corefile
-#       . {
-#           errors
-#
-#           import /etc/coredns/Corefile.extra
-#           import /etc/coredns/Corefile.dns-sd
-#           auto {
-#               directory /etc/coredns/zones
-#           }
-#           template ANY ANY {
-#               rcode REFUSED
-#           }
-#       }
-#       EOF
-#       WORKDIR /
+#       WORKDIR /etc/coredns
 #       ENTRYPOINT ["/bin/coredns"]
 #       END
 #   $ docker save routeros/coredns:latest | gzip > routeros_coredns.tar.gz
 #   $ scp routeros_coredns.tar.gz <router-address>:/
-#   $ cat << 'END' > SetupHomenetDNS.rsc
-#       :local varJobName [:jobname]
-#
-#       :global GlobalFunctionsReady;
-#       :while ($GlobalFunctionsReady != true) do={ :delay 500ms; }
-#
-#       :global ScriptLock
-#       :if ([$ScriptLock $varJobName] = false) do={ :error false }
-#
-#       :global HomenetDNS
-#       :global HomenetDNSConfig {
-#           "managedID"="...";
-#           "nsContainer"="...";
-#           "hosts"={
-#               {"name"="gateway" ; "addresses"={192.0.2.1 ; 2001:db8::1}};
-#           };
-#           "services"={
-#               {"name"="Media" ; "service"="_smb._tcp" ; "host"="samba" ; "port"=445 ; txt={"path=/media" ; "u"="guest"}};
-#           };
-#           "zonesExtra"={
-#               "home.arpa."={
-#                   "samba CNAME gateway";
-#               };
-#           };
-#       }
-#       ($HomenetDNS->"Main")
-#     END
-#   $ scp SetupHomenetDNS.rsc <router-address>:/
 #
 #   # On the Router
 #   > /interface/veth/add address=192.0.2.53/31,2001:db8:53::1/127 gateway=192.0.2.52 gateway6=2001:db8:53:: name=veth-coredns
@@ -948,6 +907,7 @@
     :local cfgNSIP6Address ($varConfig->"nsIP6Address")
     :local cfgTTL ($varConfig->"ttl")
     :local cfgCorefileExtra ($varConfig->"corefileExtra")
+    :local cfgCorefileOverride ($varConfig->"corefileOverride")
 
     :local varHasChanges false
     :local varStatePath "$cfgNSRoot/state.json"
@@ -993,22 +953,23 @@
         }
     }
 
-    # Generate DNS-SD rule for CoreDNS.
-    # The rewrite rule redirects all requests for DNS-SD auxiliary subdomains to $cfgDomain. This allows handling in one zone file.
+    # Prepre Corefile.dns-sd
     :local varDNSSDPath "$cfgNSRoot/Corefile.dns-sd"
+    # The list of subdomains with services is one for the entire LAN. The rewrite rule redirects all requests for DNS-SD
+    # browsing subdomains to $cfgDomain. This avoid unnecessary resource records.
     :local varDNSSDContents "rewrite stop name regex ^(b|db|lb)\\._dns-sd\\._udp\\.(.*)\$ {1}._dns-sd._udp.$cfgDomain answer auto\n"
     :local varDNSSDOldHash ($varOldState->"Corefile.dns-sd"->"hash")
     :local varDNSSDNewHash [:convert $varDNSSDContents transform=md5]
     :if ($varDNSSDOldHash != $varDNSSDNewHash or [($HomenetDNS->"FileExists") $varDNSSDPath] = false) do={
         $LogPrint info $varJobName ("updating Corefile.dns-sd")
         ($HomenetDNS->"WriteFile") $varDNSSDPath $varDNSSDContents
-        :set ($varNewState->"Corefile.dns-sd") ({"hash"=$varDNSSDNewHash})
         :set varHasChanges true
     } else={
         $LogPrint debug $varJobName ("reusing Corefile.dns-sd")
-        :set ($varNewState->"Corefile.dns-sd") ({"hash"=$varDNSSDOldHash})
     }
+    :set ($varNewState->"Corefile.dns-sd") ({"hash"=$varDNSSDNewHash})
 
+    # Prepre Corefile.extra
     :local varExtraPath "$cfgNSRoot/Corefile.extra"
     :local varExtraContents $cfgCorefileExtra
     :local varExtraOldHash ($varOldState->"Corefile.extra"->"hash")
@@ -1016,12 +977,40 @@
     :if ($varExtraOldHash != $varExtraNewHash or [($HomenetDNS->"FileExists") $varExtraPath] = false) do={
         $LogPrint info $varJobName ("updating Corefile.extra")
         ($HomenetDNS->"WriteFile") $varExtraPath $varExtraContents
-        :set ($varNewState->"Corefile.extra") ({"hash"=$varExtraNewHash})
         :set varHasChanges true
     } else={
         $LogPrint debug $varJobName ("reusing Corefile.extra")
-        :set ($varNewState->"Corefile.extra") ({"hash"=$varExtraOldHash})
     }
+    :set ($varNewState->"Corefile.extra") ({"hash"=$varExtraNewHash})
+
+    # Prepare Corefile
+    :local varMainPath "$cfgNSRoot/Corefile"
+    :local varMainContents $cfgCorefileOverride
+    :if ([:len $varMainContents] = 0) do={
+        :set varMainContents "\
+. {\n\
+\_   errors\n\
+\n\
+\_   import Corefile.extra\n\
+\_   import Corefile.dns-sd\n\
+\_   auto {\n\
+\_       directory zones\n\
+\_   }\n\
+\_   template ANY ANY {\n\
+\_       rcode REFUSED\n\
+\_   }\n\
+}"
+    }
+    :local varMainOldHash ($varOldState->"Corefile"->"hash")
+    :local varMainNewHash [:convert $varMainContents transform=md5]
+    :if ($varMainOldHash != $varMainNewHash or [($HomenetDNS->"FileExists") $varMainPath] = false) do={
+        $LogPrint info $varJobName ("updating Corefile")
+        ($HomenetDNS->"WriteFile") $varMainPath $varMainContents
+        :set varHasChanges true
+    } else={
+        $LogPrint debug $varJobName ("reusing Corefile")
+    }
+    :set ($varNewState->"Corefile") ({"hash"=$varMainNewHash})
 
     # Clean up files of zones that do not exist anymore.
     :local varItems [/file/print\
@@ -1287,6 +1276,7 @@
     :set ($varConfig->"useDNSForwarder" $cfgUseDNSForwarder)
 
     :set ($varConfig->"corefileExtra") [:tostr ($HomenetDNSConfig->"corefileExtra")]
+    :set ($varConfig->"corefileOverride") [:tostr ($HomenetDNSConfig->"corefileOverride")]
 
     :set ($varState->"varConfig") $varConfig
 
