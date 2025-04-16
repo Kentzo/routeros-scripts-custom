@@ -105,7 +105,7 @@
 #       . {
 #           errors
 #
-#           import /etc/coredns/Corefile.user
+#           import /etc/coredns/Corefile.extra
 #           import /etc/coredns/Corefile.dns-sd
 #           auto {
 #               directory /etc/coredns/zones
@@ -1009,18 +1009,18 @@
         :set ($varNewState->"Corefile.dns-sd") ({"hash"=$varDNSSDOldHash})
     }
 
-    :local varExtraPath "$cfgNSRoot/Corefile.user"
+    :local varExtraPath "$cfgNSRoot/Corefile.extra"
     :local varExtraContents $cfgCorefileExtra
-    :local varExtraOldHash ($varOldState->"Corefile.user"->"hash")
+    :local varExtraOldHash ($varOldState->"Corefile.extra"->"hash")
     :local varExtraNewHash [:convert $varExtraContents transform=md5]
     :if ($varExtraOldHash != $varExtraNewHash or [($HomenetDNS->"FileExists") $varExtraPath] = false) do={
-        $LogPrint info $varJobName ("updating Corefile.user")
+        $LogPrint info $varJobName ("updating Corefile.extra")
         ($HomenetDNS->"WriteFile") $varExtraPath $varExtraContents
-        :set ($varNewState->"Corefile.user") ({"hash"=$varExtraNewHash})
+        :set ($varNewState->"Corefile.extra") ({"hash"=$varExtraNewHash})
         :set varHasChanges true
     } else={
-        $LogPrint debug $varJobName ("reusing Corefile.user")
-        :set ($varNewState->"Corefile.user") ({"hash"=$varExtraOldHash})
+        $LogPrint debug $varJobName ("reusing Corefile.extra")
+        :set ($varNewState->"Corefile.extra") ({"hash"=$varExtraOldHash})
     }
 
     # Clean up files of zones that do not exist anymore.
