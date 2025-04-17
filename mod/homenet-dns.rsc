@@ -907,6 +907,7 @@
 
     :local varJobName ($argState->"varJobName")
     :local varZones ($argState->"varZones")
+    :local varContainerID ($argState->"varContainerID")
     :local varConfig ($argState->"varConfig")
     :local cfgDomain ($varConfig->"domain")
     :local cfgNSContainer ($varConfig->"nsContainer")
@@ -914,6 +915,7 @@
     :local cfgNSIPAddress ($varConfig->"nsIPAddress")
     :local cfgNSIP6Address ($varConfig->"nsIP6Address")
     :local cfgTTL ($varConfig->"ttl")
+    :local cfgUseZeroDowntime ($varConfig->"useZeroDowntime")
     :local cfgCorefileExtra ($varConfig->"corefileExtra")
     :local cfgCorefileOverride ($varConfig->"corefileOverride")
 
@@ -995,15 +997,31 @@
     :local varMainPath "$cfgNSRoot/Corefile"
     :local varMainContents $cfgCorefileOverride
     :if ([:typeof $cfgCorefileOverride] = "nothing") do={
+        :local varReloadContents ""
+        :local varAutoContents ""
+        :if ($cfgUseZeroDowntime) do={
+            :set varReloadContents ("reload " . $cfgUseZeroDowntime . "s")
+            :set varAutoContents "\
+\_   auto {\n\
+\_       directory zones\n\
+\_       reload $($cfgUseZeroDowntime)s\n\
+\_   }"
+        } else={
+            :set varAutoContents "\
+\_   auto {\n\
+\_       directory zones\n\
+\_       reload 0\n\
+\_   }"
+        }
+
         :set varMainContents "\
 . {\n\
 \_   errors\n\
+$varReloadContents\n\
 \n\
 \_   import Corefile.extra\n\
 \_   import Corefile.dns-sd\n\
-\_   auto {\n\
-\_       directory zones\n\
-\_   }\n\
+$varAutoContents\n\
 \_   template ANY ANY {\n\
 \_       rcode REFUSED\n\
 \_   }\n\
@@ -1021,6 +1039,7 @@
         $LogPrint debug $varJobName ("reusing Corefile")
     }
     :set ($varNewState->"Corefile") ({"hash"=$varMainNewHash})
+    :set ($varNewState->"useZeroDowntime") [:tostr $cfgUseZeroDowntime]
 
     # Clean up files of zones that do not exist anymore.
     :local varItems [/file/print\
@@ -1040,9 +1059,17 @@
     }
 
     :if ($varHasChanges) do={
-        $LogPrint info $varJobName ("CoreDNS configuration has changed, restarting the container")
+        $LogPrint info $varJobName ("configuration has changed")
         ($HomenetDNS->"WriteFile") $varStatePath [:serialize value=$varNewState to=json options=json.no-string-conversion]
-        ($HomenetDNS->"RestartContainer") ($argState->"varContainerID")
+    }
+
+    :local varIsRunning [/container/get $varContainerID value-name=status]
+    # CoreDNS won't notice switch to Zero Downtime without restart.
+    :local varOldZeroDowntime [:tonum ($varOldState->"useZeroDowntime")]
+    :if (($varHasChanges and $varOldZeroDowntime <= 0) or $varIsRunning != "running") do={
+        :local varName [/container/get $varContainerID value-name=name]
+        $LogPrint info $varJobName ("restarting container $varName")
+        ($HomenetDNS->"RestartContainer") $varContainerID
     }
 }
 
@@ -1284,6 +1311,26 @@
     }
     :set ($varConfig->"useDNSForwarder" $cfgUseDNSForwarder)
 
+    :local cfgUseZeroDowntimeDefault 0
+    :local cfgUseZeroDowntime ($HomenetDNSConfig->"useZeroDowntime")
+    :if ([:typeof $cfgUseZeroDowntime] = "nothing") do={
+        :set cfgUseZeroDowntime $cfgUseZeroDowntimeDefault
+    } else={
+        :if ([:typeof $cfgUseZeroDowntime] = "bool") do={
+            :if ($cfgUseZeroDowntime) do={
+                :set cfgUseZeroDowntime 60
+            } else={
+                :set cfgUseZeroDowntime 0
+            }
+        } else={
+            :set cfgUseZeroDowntime [:tonum $cfgUseZeroDowntime]
+        }
+    }
+    :if ($cfgUseZeroDowntime < 0) do={
+        :set cfgUseZeroDowntime 0
+    }
+    :set ($varConfig->"useZeroDowntime" $cfgUseZeroDowntime)
+
     :set ($varConfig->"corefileExtra") [:tostr ($HomenetDNSConfig->"corefileExtra")]
     :set ($varConfig->"corefileOverride") ($HomenetDNSConfig->"corefileOverride")
 
@@ -1332,11 +1379,9 @@
     # $LogPrint debug ($varState->"varJobName") [:serialize value=$varState to=json options=json.pretty,json.no-string-conversion]
 
     ($HomenetDNS->"TearDown") $varState
+    ($HomenetDNS->"StopContainer") ($varState->"varContainerID")
 
-    :if ($varState->"varConfig"->"manageContainer") do={
-        ($HomenetDNS->"StopContainer") ($varState->"varContainerID")
-        /container/remove ($varState->"varContainerID")
-    }
+    $LogPrint info  ($varState->"varJobName") ("container stopped; to uninstall run `/container/remove $($varState->"varContainerID")`")
 }
 
 :set ($HomenetDNS->"Main") do={
