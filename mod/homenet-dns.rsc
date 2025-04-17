@@ -1090,13 +1090,10 @@
 }
 
 :set ($HomenetDNS->"TearDownDNSForwarder") do={
-    :local argState $0
+    :local argManagedID $0
 
-    :local varConfig ($argState->"varConfig")
-    :local cfgManagedID ($varConfig->"managedID")
-
-    /ip/dns/static/remove [find comment~"$cfgManagedID\$"]
-    /ip/dns/forwarders/remove [find comment~"$cfgManagedID\$"]
+    /ip/dns/static/remove [find comment~"homenet-dns / $argManagedID\$"]
+    /ip/dns/forwarders/remove [find comment~"homenet-dns / $argManagedID\$"]
 }
 
 :set ($HomenetDNS->"TearDown") do={
@@ -1106,10 +1103,12 @@
 
     :local varConfig ($argState->"varConfig")
     :local cfgNSRoot ($varConfig->"nsRoot")
+    :local cfgManagedID ($varConfig->"managedID")
+    :local varContainerID ($argState->"varContainerID")
 
-    /container stop ($argState->"varContainerID")
+    /container stop $varContainerID
 
-    ($HomenetDNS->"TearDownDNSForwarder") $argState
+    ($HomenetDNS->"TearDownDNSForwarder") $cfgManagedID
 
     :local varItems [/file/print\
         as-value\
@@ -1330,7 +1329,7 @@
         :if ($varState->"varConfig"->"useDNSForwarder") do={
             ($HomenetDNS->"SetupDNSForwarder") $varState
         } else={
-            ($HomenetDNS->"TearDownDNSForwarder") $varState
+            ($HomenetDNS->"TearDownDNSForwarder") ($varState->"varConfig"->"managedID")
         }
     } do={
         ($HomenetDNS->"TearDown") $varState
