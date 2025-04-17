@@ -243,7 +243,7 @@
     {"domain"="test."};
 }
 
-:set ($HomenetDNS->"RestartContainer") do={
+:set ($HomenetDNS->"StopContainer") do={
     :global LogPrint
 
     :local argContainerID $0
@@ -259,6 +259,14 @@
             :error false
         }
     }
+}
+
+:set ($HomenetDNS->"RestartContainer") do={
+    :global HomenetDNS
+
+    :local argContainerID $0
+
+    ($HomenetDNS->"StopContainer") $argContainerID
     /container/start $argContainerID
 }
 
@@ -1313,6 +1321,22 @@
     :set ($varState->"varZones") [($HomenetDNS->"MakeZones") $varState]
 
     :return $varState
+}
+
+:set ($HomenetDNS->"Uninstall") do={
+    :global HomenetDNS
+
+    :global LogPrint
+
+    :local varState [($HomenetDNS->"Initialize")]
+    # $LogPrint debug ($varState->"varJobName") [:serialize value=$varState to=json options=json.pretty,json.no-string-conversion]
+
+    ($HomenetDNS->"TearDown") $varState
+
+    :if ($varState->"varConfig"->"manageContainer") do={
+        ($HomenetDNS->"StopContainer") ($varState->"varContainerID")
+        /container/remove ($varState->"varContainerID")
+    }
 }
 
 :set ($HomenetDNS->"Main") do={
