@@ -1,18 +1,17 @@
 #!rsc by RouterOS
 
-# Homenet authoritative nameserver with DNS-Based Service Discovery
+# Authoritative DNS Server on RouterOS with CoreDNS
 #
-# - Authoritative answers for IANA's Locally-Served DNS Zones (RFC 6303) and delegated IPv6 prefixes
-#   that avoid leakage of queries to the upstream DNS resolver
-# - Support for Wide-Area DNS-Based Service Discovery (aka Wide-Area Bonjour)
-# - Powered by CoreDNS: flexible, lightweight and extendable DNS server
+# - Prevent leaks of queries for domains in Locally-Served DNS zones
+# - Comprehensive *A/AAAA/PTR* resource records for hosts
+# - *PTR/SRV/TXT* resource records for Wide-Area DNS-Based Service Discovery
 #
 # For each item in "hosts" you provide a hostname and at least one IPv4 or IPv6 address that is used for the corresponding "A"
-# or "AAAA" resource record. Additional IP addresses and MAC addresses are used to gather a comprehensive list of PTR records.
+# or "AAAA" resource record. Additional IP and MAC addresses are used to produce a comprehensive list of PTR records.
 # Router's local interfaces as well as ARP and ND tables are considered. Setting "ipARPStatusRegex", "ip6NeighborStatusRegex"
-# and "interfacesRegex" narrows the seach.
+# and "interfacesRegex" narrows the search.
 #
-# For each item in "services" you provide instance and service names, hostname and port as well as contents for the corresponding
+# For each item in "services" you provide instance name, service name, hostname and port as well as contents for the corresponding
 # TXT record(s) as needed. Values must follow encodings and constraints as specified in RFC 6763, speficially Sections 4 and 6.
 #
 # The list of locally-served zones includes IANA assignments as well as "ipNetworksExtra", "ip6NetworksExtra" and "domainsExtra".
@@ -20,47 +19,101 @@
 # for names that do exist.
 #
 # Each zone is represented by two files: "db.*" with SOA and NS that $INCLUDEs "data.*" with the remaining resource records.
-# This separation allows the script to minimize disk writes and avoid unnecessary container restarts by maintaing hashes of
-# all data files in the "state.json" file.
+# This separation allows the script to minimize disk writes.
+#
+# When there is a change in zone files or CoreDNS configuration, the default is to restart the container. This can behavior
+# can be changed by setting `useZeroDowntime="yes"` at the expense of more disk reads.
 #
 # By default the script checks whether RouterOS's DNS Resolver is set to allow remote requests and if so a forwarder will be set up.
 #
 # Additional zones and resource records can be set verbatim via "zonesExtra". Additional CoreDNS configuration can be set via
-# "corefileExtra".
+# "corefileExtra". You can completely override default Corefile with "corefileOverride", the default configuration can be referenced
+# by `import homenet-dns-default`.
 #
-# $HomenetDNSConfig:
-#   - managedID (str): Regex-escaped unique ID of the managed objects
-#   - nsContainer (str): Name of the CoreDNS container
-#   - [nsRoot] (str): Optional Path to the CoreDNS working directory on an attached disk that will be mounted into the container; defaults to the container's first mount
-#   - [nsIPAddress] (ip, str): Optional IPv4 address of the nameserver; defaults to the container's first IPv4 address
-#   - [nsIP6Address] (ip, str): Optional IPv6 address of the nameserver; defaults to the container's first IPv6 address
-#   - [domain] (str): Optional default domain name for hosts and services; defaults to global-config's $Domain, if present, otherwise "home.arpa."
-#   - [ttl] (num): Optional TTL in seconds for DNS resource records; defaults to 3600
-#   - [hosts] (array): Optional array of hosts
-#       - name: Hostname (and subdomain) relative to the "domain"
-#       - [domain]: Optional domain of the host; defaults to config's "domain"
-#       - addresses: An array of IPv4, IPv6 or MAC addresses
-#   - [services] (array): Optional array of DNS-SD services (RFC 6763)
-#       - name: <Instance> of Service Instance Name, encoded and escaped, e.g. "Home\\ Media"
-#       - service: <Service> of Service Instance Name, e.g. "_smb._tcp"
-#       - [domain]: Optional <Domain> of Service Instance Name, e.g. "home.arpa."; defaults to config's "domain"
-#       - host: Hostname that provides service, e.g. "gateway" (relative to "domain") or "gateway.home.arpa." (absolute)
-#       - port: Port on the "host" where the service is available, e.g. "445"
-#       - [txt]: Optional TXT record(s) associated with the service instance
-#           - {str}: one TXT record with multiple values, e.g. {"path"="/usb1-part2/media" ; "u=guest"} -> TXT ("path=/usb1-part2/media" "u=guest")
-#           - {{str}}: Multiple TXT records where each follows the rule above
-#   - [useDNSForwarder] (bool): Option flag to control whether /ip/dns/forwdarder for all configured zones is set up; defaults to `/ip/dns`'s allow-remote-requests
-#   - [ipARPStatusRegex] (str): Optional regex to filter IPv4 ARP when resolving hosts; defaults to "(permanent|reachable|stale)"
-#   - [ip6NeighborStatusRegex] (str): Optional regex to filter IPv6 neighbors when resolving hosts; defaults to "(noarp|reachable|stale)"
-#   - [interfacesRegex] (str): Optional regex to filter interfaces when resolving addresses of hosts and delegated networks; defaults to ".*"
-#   - [ipNetworksExtra] (array): Optional array of additional IPv4 networks delegated to the router; defaults to `/ip/dhcp-server/network`
-#   - [ip6NetworksExtra] (array): Optional array of additional IPv6 networks delegated to the router; defaults to `/ipv6/dhcp-server` and `/ipv6/nd/prefix`
-#   - [domainsExtra] (array): Optional array of additional domains delegated to the router
-#   - [zonesExtra] (array): Optional array of additional resource records
-#       - key: Zone domain name
-#       - value: An array of additional resource records to append to the zone file
-#   - [corefileExtra] (str): Optional additional CoreDNS configuration for the main server block, passed verbatim
-#   - [corefileOverride] (str): Optional CoreDNS configuration override, passed verbatim
+# :global HomenetDNSConfig ({
+#     # (str): Regex-escaped unique ID of the managed objects
+#     "managedID"="01234567-1337-dead-beef-0123456789ab";
+#
+#     # (str): Name of the CoreDNS container
+#     "nsContainer"="...";
+#
+#     # (str): Optional path to the CoreDNS working directory that will be mounted into the container; defaults to the container's first mount
+#     # "nsRoot"="";
+#
+#     # (ip, str): Optional IPv4 address of the DNS server in zone files; defaults to the container's first IPv4 address
+#     # "nsIPAddress"=;
+#
+#     #(ip, str): Optional IPv6 address of the DNS server in zone files; defaults to the container's first IPv6 address
+#     # "nsIP6Address"=;
+#
+#     # (str): Optional default domain name for hosts and services; defaults to global-config's $Domain, if present, otherwise "home.arpa."
+#     # "domain"="home.arpa.";
+#
+#     # (num): Optional TTL in seconds for DNS resource records; defaults to 3600
+#     # "ttl"=3600;
+#
+#     # (array): Optional array of hosts for address resource records; defaults to empty
+#     #   - name: Hostname (and subdomain) relative to the "domain"
+#     #   - [domain]: Optional domain of the host; defaults to config's "domain"
+#     #   - addresses: An array of IPv4, IPv6 or MAC addresses
+#     # "hosts"={
+#     #     {"name"="gateway" ; "addresses"={192.0.2.1 ; 2001:db8::1}};
+#     # };
+#
+#     # (array): Optional array of DNS-SD services (RFC 6763); defaults to empty
+#     #   - name: <Instance> of Service Instance Name, encoded and escaped, e.g. "Home\\ Media"
+#     #   - service: <Service> of Service Instance Name, e.g. "_smb._tcp"
+#     #   - [domain]: Optional <Domain> of Service Instance Name, e.g. "home.arpa."; defaults to config's "domain"
+#     #   - host: Hostname that provides service, e.g. "gateway" (relative to "domain") or "gateway.home.arpa." (absolute)
+#     #   - port: Port on the "host" where the service is available, e.g. "445"
+#     #   - [txt]: Optional TXT record(s) associated with the service instance
+#     #     - {str}: one TXT record with multiple values, e.g. {"path"="/usb1-part2/media" ; "u=guest"} -> TXT ("path=/usb1-part2/media" "u=guest")
+#     #     - {{str}}: Multiple TXT records where each follows the rule above
+#     # "services"={
+#     #     {"name"="Home\\ Media" ; "service"="_smb._tcp" ; "host"="gateway" ; "port"=445 ; txt={"path=/media" ; "u"="guest"}};
+#     # };
+#
+#     # (bool): Optional flag to control whether /ip/dns/forwdarder for all configured zones is set up; defaults to `/ip/dns/get value-name=allow-remote-requests`
+#     # "useDNSForwarder"=yes;
+#
+#     # (bool, num, time): Optional flag or refresh interval to control whether CoreDNS uses zero-downtime deployment; defaults to no
+#     #   - yes or >0 interval causes CoreDNS to re-read configuration and zones every so often; defaults to 60s
+#     #   - no or <=0 interval disables zero-downtime behavior; instead the container gets restarted on changes
+#     # "useZeroDowntime"=no;
+#
+#     # (str): Optional regex to filter IPv4 ARP when resolving hosts; defaults to "(permanent|reachable|stale)"
+#     # "ipARPStatusRegex"="(permanent|reachable|stale)";
+#
+#     # (str): Optional regex to filter IPv6 neighbors when resolving hosts; defaults to "(noarp|reachable|stale)"
+#     # "ip6NeighborStatusRegex"="(noarp|reachable|stale)";
+#
+#     # (str): Optional regex to filter interfaces when resolving addresses of hosts and delegated networks; defaults to ".*"
+#     # "interfacesRegex"=".*";
+#
+#     # (array): Optional array of additional IPv4 networks delegated to the router; defaults to advertised prefixes
+#     # "ipNetworksExtra"={};
+#
+#     # (array): Optional array of additional IPv6 networks delegated to the router; defaults to delegated and advertised prefixes
+#     # "ip6NetworksExtra"={};
+#
+#     # (array): Optional array of additional domains delegated to the router
+#     # "domainsExtra"={};
+#
+#     # (array): Optional array of additional resource records
+#     #   - key: Zone domain name
+#     #   - value: An array of additional resource records to append to the zone file
+#     # "zonesExtra"={
+#     #     "home.arpa."={
+#     #         "samba CNAME gateway";
+#     #     }
+#     # };
+#
+#     # (str): Optional additional CoreDNS configuration for the main server block, passed verbatim
+#     # "corefileExtra"="";
+#
+#     # (str): Optional CoreDNS configuration override, passed verbatim; contents of the default main server block is available via the "homenet-dns-default" snippet
+#     # "corefileOverride"="";
+# })
 #
 # Affects:
 #   - /container
@@ -89,6 +142,7 @@
 #       WORKDIR /src
 #       ADD https://github.com/coredns/coredns.git\#v1.12.1 /src
 #       COPY <<EOF /src/plugin.cfg
+#       reload:reload
 #       errors:errors
 #       log:log
 #       cache:cache
@@ -102,7 +156,9 @@
 #       FROM --platform=$TARGETPLATFORM gcr.io/distroless/static-debian12
 #       COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 #       COPY --from=build /src/coredns /bin/coredns
+#       USER root
 #       WORKDIR /etc/coredns
+#       EXPOSE 53 53/udp
 #       ENTRYPOINT ["/bin/coredns"]
 #       END
 #   $ docker save routeros/coredns:latest | gzip > routeros_coredns.tar.gz
@@ -114,11 +170,10 @@
 #   > /ipv6/address/add address=2001:db8:53::/127 advertise=no interface=veth-coredns no-dad=yes
 #   > /container/mounts/add dst=/etc/coredns/ name=coredns src=/usb1-part2/coredns/config
 #   > /container/add file=routeros_coredns.tar.gz interface=veth-coredns root-dir=usb1-part2/coredns/root mounts=coredns workdir=/ logging=yes start-on-boot=yes
-#   > /container/print where interface=veth-coredns; # note container name in the output
-#   > /system/script/add name=SetupHomenetDNS source=[/file/get SetupHomenetDNS.rsc contents] policy=read,write,sensitive
-#   > /system/script/edit SetupHomenetDNS value-name=source; # set "nsContainer" to the container name
-#   > /system/script/run SetupHomenetDNS
-#   > /system/scheduler/add name=UpdateHomenetDNS interval=24h on-event=SetupHomenetDNS policy=read,write,sensitive
+#   > # Add $HomeDNSConfig definition in global-config-override
+#   > /system/scheduler/add name=update-homenet-dns interval=24h start-time=03:00:00 on-event=setup-homenet-dns policy=read,write,sensitive
+#   > # Also run it in /ipv6/dhcp-client's script
+#   > /system/script/run setup-homenet-dns
 
 :global HomenetDNS
 :global HomenetDNSConfig
