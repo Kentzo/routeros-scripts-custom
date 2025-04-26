@@ -995,27 +995,25 @@
 
     # Prepare Corefile
     :local varMainPath "$cfgNSRoot/Corefile"
-    :local varMainContents $cfgCorefileOverride
-    :if ([:typeof $cfgCorefileOverride] = "nothing") do={
-        :local varReloadContents ""
-        :local varAutoContents ""
-        :if ($cfgUseZeroDowntime) do={
-            :set varReloadContents ("reload " . $cfgUseZeroDowntime . "s")
-            :set varAutoContents "\
+
+    :local varReloadContents ""
+    :local varAutoContents ""
+    :if ($cfgUseZeroDowntime) do={
+        :set varReloadContents ("reload " . $cfgUseZeroDowntime . "s")
+        :set varAutoContents "\
 \_   auto {\n\
 \_       directory zones\n\
 \_       reload $($cfgUseZeroDowntime)s\n\
 \_   }"
-        } else={
+    } else={
             :set varAutoContents "\
 \_   auto {\n\
 \_       directory zones\n\
 \_       reload 0\n\
 \_   }"
-        }
-
-        :set varMainContents "\
-. {\n\
+    }
+    :local varMainContentsDefault "\
+(homenet-dns-default) {\n\
 \_   errors\n\
 $varReloadContents\n\
 \n\
@@ -1026,8 +1024,15 @@ $varAutoContents\n\
 \_       rcode REFUSED\n\
 \_   }\n\
 }"
+    :local varMainContents
+    :if ([:typeof $cfgCorefileOverride] = "nothing") do={
+        :set varMainContents "\
+$varMainContentsDefault\n\
+. {\n\
+\_   import homenet-dns-default\n\
+}"
     } else={
-        :set varMainContents [:tostr $cfgCorefileOverride]
+        :set varMainContents ("$varMainContentsDefault\n" . [:tostr $cfgCorefileOverride])
     }
     :local varMainOldHash ($varOldState->"Corefile"->"hash")
     :local varMainNewHash [:convert $varMainContents transform=md5]
