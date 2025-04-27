@@ -1436,9 +1436,10 @@ $varMainContentsDefault\n\
     :global HomenetDNS
 
     :global LogPrint
+    :global LogPrintVerbose
 
     :local varState [($HomenetDNS->"Initialize")]
-    # $LogPrint debug ($varState->"varJobName") [:serialize value=$varState to=json options=json.pretty,json.no-string-conversion]
+    $LogPrintVerbose debug ($varState->"varJobName") [:serialize value=$varState to=json options=json.pretty,json.no-string-conversion]
 
     ($HomenetDNS->"TearDown") $varState
     ($HomenetDNS->"StopContainer") ($varState->"varContainerID")
@@ -1450,9 +1451,10 @@ $varMainContentsDefault\n\
     :global HomenetDNS
 
     :global LogPrint
+    :global LogPrintVerbose
 
     :local varState [($HomenetDNS->"Initialize")]
-    # $LogPrint debug ($varState->"varJobName") [:serialize value=$varState to=json options=json.pretty,json.no-string-conversion]
+    $LogPrintVerbose debug ($varState->"varJobName") [:serialize value=$varState to=json options=json.pretty,json.no-string-conversion]
 
     :onerror varError in={
         ($HomenetDNS->"SetupCoreDNS") $varState
