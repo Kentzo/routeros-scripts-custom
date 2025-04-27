@@ -6,6 +6,8 @@
 # - Comprehensive *A/AAAA/PTR* resource records for hosts
 # - *PTR/SRV/TXT* resource records for Wide-Area DNS-Based Service Discovery
 #
+# Introduction and discussion: https://gist.github.com/Kentzo/36dee5b82ba1b25bec0167a5e07c565f
+#
 # For each item in "hosts" you provide a hostname and at least one IPv4 or IPv6 address that is used for the corresponding "A"
 # or "AAAA" resource record. Additional IP and MAC addresses are used to produce a comprehensive list of PTR records.
 # Router's local interfaces as well as ARP and ND tables are considered. Setting "ipARPStatusRegex", "ip6NeighborStatusRegex"
