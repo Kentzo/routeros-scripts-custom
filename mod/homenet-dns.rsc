@@ -365,18 +365,18 @@
     }
 }
 
-:set ($HomenetDNS->"MakeFQDN") do={
+:set ($HomenetDNS->"MakeAbsoluteDomain") do={
     :local argDomain $0
     :local argDefaultDomain $1
 
     :local varDomain $argDomain
     :if ([:len $varDomain] = 0) do={
         :set varDomain $argDefaultDomain
-    } else={
-        :if ([:pick $varDomain ([:len $varDomain] - 1)] != ".") do={
-            :set varDomain "$varDomain."
-        }
     }
+    :if ([:pick $varDomain ([:len $varDomain] - 1)] != ".") do={
+        :set varDomain ("$varDomain" . ".")
+    }
+
     :return $varDomain
 }
 
@@ -1306,7 +1306,7 @@ $varMainContentsDefault\n\
     :if ([:len $cfgDomain] = 0 and [:len $Domain] > 0) do={
         :set cfgDomain $Domain
     }
-    :set cfgDomain [($HomenetDNS->"MakeFQDN") $cfgDomain $cfgDomainDefault]
+    :set cfgDomain [($HomenetDNS->"MakeAbsoluteDomain") $cfgDomain $cfgDomainDefault]
     :set ($varConfig->"domain") $cfgDomain
 
     :local cfgTTL ($HomenetDNSConfig->"ttl")
@@ -1339,14 +1339,14 @@ $varMainContentsDefault\n\
 
     :local cfgHosts ({})
     :foreach varI in=($HomenetDNSConfig->"hosts") do={
-        :set ($varI->"domain") [($HomenetDNS->"MakeFQDN") ($varI->"domain") $cfgDomain]
+        :set ($varI->"domain") [($HomenetDNS->"MakeAbsoluteDomain") ($varI->"domain") $cfgDomain]
         :set cfgHosts ($cfgHosts , {$varI})
     }
     :set ($varConfig->"hosts") $cfgHosts
 
     :local cfgServices ({})
     :foreach varI in=($HomenetDNSConfig->"services") do={
-        :set ($varI->"domain") [($HomenetDNS->"MakeFQDN") ($varI->"domain") $cfgDomain]
+        :set ($varI->"domain") [($HomenetDNS->"MakeAbsoluteDomain") ($varI->"domain") $cfgDomain]
         :set cfgServices ($cfgServices , {$varI})
     }
     :set ($varConfig->"services") $cfgServices
