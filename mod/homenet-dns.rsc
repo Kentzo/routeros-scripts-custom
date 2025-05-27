@@ -577,7 +577,7 @@
                 where\
                     !disabled\
                     !invalid\
-                    ($varAddress in $address)\
+                    ([$StructureIPAddress $address]->"address"=$varAddress)\
                     interface~$cfgInterfacesRegex]
             :foreach varI in=$varItems do={
                 :local varInt ($varI->"interface")
@@ -615,7 +615,7 @@
                 where\
                     !disabled\
                     !invalid\
-                    ($varAddress in $address)\
+                    ([$StructureIP6Address $address]->"address"=$varAddress)\
                     interface~$cfgInterfacesRegex]
             :foreach varI in=$varItems do={
                 :local varInt ($varI->"interface")
