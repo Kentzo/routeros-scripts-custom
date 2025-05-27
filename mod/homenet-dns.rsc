@@ -312,6 +312,7 @@
             :delay 100ms
             :set varRetry ($varRetry + 1)
         } else={
+            :local varJobName [:jobname]
             $LogPrint error $varJobName ("failed to stop the container")
             :error false
         }
@@ -1444,7 +1445,7 @@ $varMainContentsDefault\n\
     ($HomenetDNS->"TearDown") $varState
     ($HomenetDNS->"StopContainer") ($varState->"varContainerID")
 
-    $LogPrint info  ($varState->"varJobName") ("container stopped; to uninstall run `/container/remove $($varState->"varContainerID")`")
+    $LogPrint info ($varState->"varJobName") ("container stopped; to uninstall run `/container/remove $($varState->"varContainerID")`")
 }
 
 :set ($HomenetDNS->"Main") do={
