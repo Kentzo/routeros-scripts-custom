@@ -1,11 +1,11 @@
 Available scripts
 =================
 
-* [mod/kentzo-functions](mod/ipv6-functions): Utility functions used by other modules and scripts
-* [mod/ipv4-structured](mod/ipv6-structured): Structured view of the IPv4 address
-* [mod/ipv6-structured](mod/ipv6-structured): Structured view of the IPv6 address
+* [mod/kentzo-functions](mod/kentzo-functions.src): Utility functions used by other modules and scripts
+* [mod/ipv4-structured](mod/ipv4-structured.rsc): Structured view of the IPv4 address
+* [mod/ipv6-structured](mod/ipv6-structured.rsc): Structured view of the IPv6 address
+* [mod/homenet-dns](mod/homenet-dns.rsc): Configure zones for a homenet authoritative nameserver powered by [CoreDNS](https://coredns.io)
 * [ipv6-npt](ipv6-npt): Install or update NPTv6 rules for a given prefix
-* [homenet-dns](homenet-dns): Configure zones for a homenet authoritative nameserver powered by [CoreDNS](https://coredns.io)
 
 For detailed documentation consult corresponding script files.
 
