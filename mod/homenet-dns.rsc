@@ -1408,22 +1408,30 @@ $varMainContentsDefault\n\
     :local varItems [$DeduplicateIPAddresses ($varConfig->"ipNetworksExtra") structure=true]
     :local varLookupTable ({})
     :foreach varI in=$varItems do={
-        :set varLookupTable ($varLookupTable , {{
-            "network"=($varI->"addressPrefix");
-            "address"=($varI->"prefix");
-            "domain"=[$MakeIPDomain $varI];
-        }})
+        # Skip extra IPv4 network zones that are already included in the RFC6303 table.
+        :local varOrigin [($HomenetDNS->"FindZoneOriginInLookupTable") ($HomenetDNS->"constRFC6303IPDomainsLookupTable") ($varI->"prefix")]
+        :if ([:len $varOrigin] = 0) do={
+            :set varLookupTable ($varLookupTable , {{
+                "network"=($varI->"addressPrefix");
+                "address"=($varI->"prefix");
+                "domain"=[$MakeIPDomain $varI];
+            }})
+        }
     }
     :set ($varState->"varIPNetworksExtraLookupTable") $varLookupTable
 
     :set varItems [$DeduplicateIP6Addresses ($varConfig->"ip6NetworksExtra") structure=true]
     :set varLookupTable ({})
     :foreach varI in=$varItems do={
-        :set varLookupTable ($varLookupTable , {{
-            "network"=($varI->"addressPrefix");
-            "address"=($varI->"prefix");
-            "domain"=[$MakeIP6Domain $varI];
-        }})
+        # Skip extra IPv6 network zones that are already included in the RFC6303 table.
+        :local varOrigin [($HomenetDNS->"FindZoneOriginInLookupTable") ($HomenetDNS->"constRFC6303IP6DomainsLookupTable") ($varI->"prefix")]
+        :if ([:len $varOrigin] = 0) do={
+            :set varLookupTable ($varLookupTable , {{
+                "network"=($varI->"addressPrefix");
+                "address"=($varI->"prefix");
+                "domain"=[$MakeIP6Domain $varI];
+            }})
+        }
     }
     :set ($varState->"varIP6NetworksExtraLookupTable") $varLookupTable
 
