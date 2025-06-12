@@ -368,30 +368,27 @@
 
 :set ($HomenetDNS->"MakeAbsoluteDomain") do={
     :local argDomain $0
-    :local argDefaultDomain $1
+    :local argOrigin $1
 
     :local varDomain $argDomain
-    :if ([:len $varDomain] = 0) do={
-        :set varDomain $argDefaultDomain
-    }
     :if ([:pick $varDomain ([:len $varDomain] - 1)] != ".") do={
-        :set varDomain ("$varDomain" . ".")
+        :set varDomain ($varDomain . $argOrigin)
     }
 
     :return $varDomain
 }
 
 :set ($HomenetDNS->"MakeRelativeDomain") do={
-    :local argOrigin $0
-    :local argFQDN $1
+    :local argDomain $0
+    :local argOrigin $1
 
-    :if ($argFQDN = $argOrigin) do={
+    :if ($argDomain = $argOrigin) do={
         :return "@"
     } else={
-        :if ($argFQDN ~ "\\.$argOrigin\$") do={
-            :return [:pick $argFQDN 0 ([:len $argFQDN] - [:len $argOrigin] - 1)]
+        :if ($argDomain ~ "\\.$argOrigin\$") do={
+            :return [:pick $argDomain 0 ([:len $argDomain] - [:len $argOrigin] - 1)]
         } else={
-            :return $argFQDN
+            :return $argDomain
         }
     }
 }
@@ -745,7 +742,7 @@
 
         # Add A, AAAA and PTR resource records to the corresponding zones.
         :local varOrigin [($HomenetDNS->"FindZoneOrigin") $argState $varDomain]
-        :local varOwner [($HomenetDNS->"MakeRelativeDomain") $varOrigin ("$varName.$varDomain")]
+        :local varOwner [($HomenetDNS->"MakeRelativeDomain") ("$varName.$varDomain") $varOrigin]
 
         :local varA ($varResolvedAddresses->"a")
         :if ([:len $varA]) do={
@@ -770,7 +767,7 @@
             } else={
                 :set varOwner [$MakeIP6Domain $varAddress]
             }
-            :set varOwner [($HomenetDNS->"MakeRelativeDomain") $varOrigin $varOwner]
+            :set varOwner [($HomenetDNS->"MakeRelativeDomain") $varOwner $varOrigin]
             :set ($varZones->$varOrigin) ($varZones->$varOrigin , "$varOwner PTR $varName.$varDomain")
         }
     }
@@ -803,7 +800,7 @@
 
         :local varServiceType ($varService->"service")
         :local varServiceOwner "$varServiceType.$varDomain"
-        :set varServiceOwner [($HomenetDNS->"MakeRelativeDomain") $varOrigin $varServiceOwner]
+        :set varServiceOwner [($HomenetDNS->"MakeRelativeDomain") $varServiceOwner $varOrigin]
 
         :local varInstance ($varService->"name")
         :local varInstanceOwner "$varInstance.$varServiceOwner"
@@ -812,7 +809,7 @@
         :if ([:pick $varHostOwner ([:len $varHostOwner] - 1)] != ".") do={
             :set varHostOwner "$varHostOwner.$varDomain"
         }
-        :set varHostOwner [($HomenetDNS->"MakeRelativeDomain") $varOrigin $varHostOwner]
+        :set varHostOwner [($HomenetDNS->"MakeRelativeDomain") $varHostOwner $varOrigin]
 
         :set ($varZones->$varOrigin) ($varZones->$varOrigin,\
             "$varServiceOwner PTR $varInstanceOwner",\
@@ -854,8 +851,8 @@
         :foreach varI in=$varTypes do={
             :local varOrigin [($HomenetDNS->"FindZoneOrigin") $argState $varDomain]
             :local varOwner "_services._dns-sd._udp.$varDomain"
-            :set varOwner [($HomenetDNS->"MakeRelativeDomain") $varOrigin $varOwner]
-            :set varI [($HomenetDNS->"MakeRelativeDomain") $varOrigin $varI]
+            :set varOwner [($HomenetDNS->"MakeRelativeDomain") $varOwner $varOrigin]
+            :set varI [($HomenetDNS->"MakeRelativeDomain") $varI $varOrigin]
             :set ($varZones->$varOrigin) ($varZones->$varOrigin , "$varOwner PTR $varI")
         }
 
@@ -867,14 +864,14 @@
     # it's sufficient to only add them once to the zone of $cfgDomain.
     :local varOrigin [($HomenetDNS->"FindZoneOrigin") $argState $cfgDomain]
     :local varOwner "_dns-sd._udp.$cfgDomain"
-    :set $varOwner [($HomenetDNS->"MakeRelativeDomain") $varOrigin $varOwner]
+    :set $varOwner [($HomenetDNS->"MakeRelativeDomain") $varOwner $varOrigin]
     :foreach varI in=$varAllServiceDomains do={
-        :set varI [($HomenetDNS->"MakeRelativeDomain") $varOrigin $varI]
+        :set varI [($HomenetDNS->"MakeRelativeDomain") $varI $varOrigin]
         :set ($varZones->$varOrigin) ($varZones->$varOrigin,\
             "b.$varOwner PTR $varI",\
             "lb.$varOwner PTR $varI")
     }
-    :set ($varZones->$varOrigin) ($varZones->$varOrigin , "db.$varOwner PTR $[($HomenetDNS->"MakeRelativeDomain") $varOrigin $cfgDomain]")
+    :set ($varZones->$varOrigin) ($varZones->$varOrigin , "db.$varOwner PTR $[($HomenetDNS->"MakeRelativeDomain") $cfgDomain $varOrigin]")
 
     :return $varZones
 }
@@ -918,7 +915,7 @@
     :if ([:len $cfgNSIPAddress]) do={
         :local varNSIPDomain [$MakeIPDomain $cfgNSIPAddress]
         :set varNSIPOrigin [($HomenetDNS->"FindZoneOrigin") $argState $cfgNSIPAddress]
-        :set varNSIPOwner [($HomenetDNS->"MakeRelativeDomain") $varNSIPOrigin $varNSIPDomain]
+        :set varNSIPOwner [($HomenetDNS->"MakeRelativeDomain") $varNSIPDomain $varNSIPOrigin]
     }
     :local varNSIPPTRRRSet ({})
 
@@ -927,7 +924,7 @@
     :if ([:len $cfgNSIP6Address]) do={
         :local varNSIP6Domain [$MakeIP6Domain $cfgNSIP6Address]
         :set varNSIP6Origin [($HomenetDNS->"FindZoneOrigin") $argState $cfgNSIP6Address]
-        :set varNSIP6Owner [($HomenetDNS->"MakeRelativeDomain") $varNSIP6Origin $varNSIP6Domain]
+        :set varNSIP6Owner [($HomenetDNS->"MakeRelativeDomain") $varNSIP6Domain $varNSIP6Origin]
     }
     :local varNSIP6PTRRRSet ({})
 
@@ -1307,7 +1304,10 @@ $varMainContentsDefault\n\
     :if ([:len $cfgDomain] = 0 and [:len $Domain] > 0) do={
         :set cfgDomain $Domain
     }
-    :set cfgDomain [($HomenetDNS->"MakeAbsoluteDomain") $cfgDomain $cfgDomainDefault]
+    :if ([:len $ccfgDomain] = 0) do={
+        :set cfgDomain $cfgDomainDefault
+    }
+    :set cfgDomain [($HomenetDNS->"MakeAbsoluteDomain") $cfgDomain "."]
     :set ($varConfig->"domain") $cfgDomain
 
     :local cfgTTL ($HomenetDNSConfig->"ttl")
@@ -1340,14 +1340,20 @@ $varMainContentsDefault\n\
 
     :local cfgHosts ({})
     :foreach varI in=($HomenetDNSConfig->"hosts") do={
-        :set ($varI->"domain") [($HomenetDNS->"MakeAbsoluteDomain") ($varI->"domain") $cfgDomain]
+        :if ([:len ($varI->"domain")] = 0) do={
+            :set ($varI->"domain") $cfgDomain
+        }
+        :set ($varI->"domain") [($HomenetDNS->"MakeAbsoluteDomain") ($varI->"domain") "."]
         :set cfgHosts ($cfgHosts , {$varI})
     }
     :set ($varConfig->"hosts") $cfgHosts
 
     :local cfgServices ({})
     :foreach varI in=($HomenetDNSConfig->"services") do={
-        :set ($varI->"domain") [($HomenetDNS->"MakeAbsoluteDomain") ($varI->"domain") $cfgDomain]
+        :if ([:len ($varI->"domain")] = 0) do={
+            :set ($varI->"domain") $cfgDomain
+        }
+        :set ($varI->"domain") [($HomenetDNS->"MakeAbsoluteDomain") ($varI->"domain") "."]
         :set cfgServices ($cfgServices , {$varI})
     }
     :set ($varConfig->"services") $cfgServices
