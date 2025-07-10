@@ -23,14 +23,16 @@
 # Each zone is represented by two files: "db.*" with SOA and NS that $INCLUDEs "data.*" with the remaining resource records.
 # This separation allows the script to minimize disk writes.
 #
-# When there is a change in zone files or CoreDNS configuration, the default is to restart the container. This can behavior
-# can be changed by setting `useZeroDowntime="yes"` at the expense of more disk reads.
+# When there is a change in zone files or CoreDNS configuration, the default is to restart the container. This behavior
+# can be changed by setting "useZeroDowntime" at the expense of more disk reads.
 #
-# By default the script checks whether RouterOS's DNS Resolver is set to allow remote requests and if so a forwarder will be set up.
+# If RouterOS's DNS Resolver is set to allow remote requests, the script assumes that router's DNS server is used in the LAN.
+# DNS forwarders are added to redirect requests for delegated domains and networks to the CoreDNS instance. This behavior is
+# controlled by "useDNSForwarder".
 #
 # Additional zones and resource records can be set verbatim via "zonesExtra". Additional CoreDNS configuration can be set via
-# "corefileExtra". You can completely override default Corefile with "corefileOverride", the default configuration can be referenced
-# by `import homenet-dns-default`.
+# "corefileExtra". You can completely override default Corefile with "corefileOverride" where the default server block configuration
+# can be referenced by `import homenet-dns-default`.
 #
 # :global HomenetDNSConfig ({
 #     # (str): Regex-escaped unique ID of the managed objects
