@@ -1273,7 +1273,8 @@ $varMainContentsDefault\n\
         $LogPrint error $varJobName ("nsRoot must not be empty")
         :error false
     }
-    :if ([/file/get $cfgNSRoot value-name="type"] != "directory") do={
+    :local cfgNSRootType [/file/get $cfgNSRoot value-name="type"]
+    :if ($cfgNSRootType != "directory" and $cfgNSRootType != "container store") do={
         $LogPrint error $varJobName ("nsRoot must be an existing directory")
         :error false
     }
