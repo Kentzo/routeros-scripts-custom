@@ -309,7 +309,7 @@
 
     /container/stop $argContainerID
     :local varRetry 0
-    :while ([/container/get $argContainerID value-name=status] != "stopped") do={
+    :while ([/container/get $argContainerID value-name=stopped] != true) do={
         :if ($varRetry < 100) do={
             :delay 100ms
             :set varRetry ($varRetry + 1)
@@ -1125,10 +1125,10 @@ $varMainContentsDefault\n\
         ($HomenetDNS->"WriteFile") $varStatePath [:serialize value=$varNewState to=json options=json.no-string-conversion]
     }
 
-    :local varIsRunning [/container/get $varContainerID value-name=status]
+    :local varIsRunning [/container/get $varContainerID value-name=running]
     # CoreDNS won't notice switch to Zero Downtime without restart.
     :local varOldZeroDowntime [:tonum ($varOldState->"useZeroDowntime")]
-    :if (($varHasChanges and $varOldZeroDowntime <= 0) or $varIsRunning != "running") do={
+    :if (($varHasChanges and $varOldZeroDowntime <= 0) or $varIsRunning != true) do={
         :local varName [/container/get $varContainerID value-name=name]
         $LogPrint info $varJobName ("restarting container $varName")
         ($HomenetDNS->"RestartContainer") $varContainerID
