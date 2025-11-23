@@ -67,11 +67,23 @@
 # 8193;3512;0;0;0;0;0;1
 #
 :global MakeIP6FieldsFromAddress do={
-    :local varAddr [:tostr $1]
-    :local varAddrLen [:len $varAddr]
+    :global MakeIPFieldsFromAddress
+
+    :local argAddr [:toip6 $1]
+    :if ([:typeof $argAddr] != "ip6") do={ :error "\"$1\" is invalid IPv6 address"}
+    :set argAddr [:tostr $argAddr]
+
+    :local varAddrLen [:len $argAddr]
 
     # ::
     :if ($varAddrLen = 2) do={ :return {0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0} }
+
+    # ::ffff:a.b.c.d
+    if ($varAddrLen >= 14 and [:pick $argAddr 0 7] = "::ffff:") do={
+        :local varIPAddr [:pick $argAddr 7 $varAddrLen]
+        :local varIPFields [$MakeIPFieldsFromAddress $varIPAddr]
+        :return {0 ; 0 ; 0 ; 0 ; 0 ; 65535 ; ($varIPFields->0<<8) + $varIPFields->1 ; ($varIPFields->2<<8) + $varIPFields->3}
+    }
 
     :local funcParseFields do={
         :local varFieldParts ({})
@@ -88,11 +100,11 @@
         :return $varFieldParts
     }
 
-    :local varDelimIdx [:find $varAddr ":"]
+    :local varDelimIdx [:find $argAddr ":"]
 
     # ::x
     :if ($varDelimIdx = 0) do={
-        :local varFieldsTail [$funcParseFields [:pick $varAddr 2 $varAddrLen]]
+        :local varFieldsTail [$funcParseFields [:pick $argAddr 2 $varAddrLen]]
         :local varFieldsHead ({})
         :for i from=0 to=(7 - [:len $varFieldsTail]) step=1 do={ :set varFieldsHead ($varFieldsHead , 0) }
         :return ($varFieldsHead , $varFieldsTail)
@@ -100,25 +112,25 @@
 
     # x::
     :if ($varDelimIdx = ($varAddrLen - 2)) do={
-        :local varFieldsHead [$funcParseFields [:pick $varAddr 0 $varDelimIdx]]
+        :local varFieldsHead [$funcParseFields [:pick $argAddr 0 $varDelimIdx]]
         :local varFieldsTail ({})
         :for i from=0 to=(7 - [:len $varFieldsHead]) step=1 do={ :set varFieldsTail ($varFieldsTail , 0) }
         :return ($varFieldsHead , $varFieldsTail)
     }
 
-    :set varDelimIdx [:find $varAddr "::" ($varDelimIdx - 1)]
+    :set varDelimIdx [:find $argAddr "::" ($varDelimIdx - 1)]
 
     # x::x
     :if ([:typeof $varDelimIdx] != "nil") do={
-        :local varFieldsHead [$funcParseFields [:pick $varAddr 0 $varDelimIdx]]
-        :local varFieldsTail [$funcParseFields [:pick $varAddr ($varDelimIdx + 2) $varAddrLen]]
+        :local varFieldsHead [$funcParseFields [:pick $argAddr 0 $varDelimIdx]]
+        :local varFieldsTail [$funcParseFields [:pick $argAddr ($varDelimIdx + 2) $varAddrLen]]
         :local varFieldsMid ({})
         :for i from=0 to=(7 - [:len $varFieldsHead] - [:len $varFieldsTail]) step=1 do={ :set varFieldsMid ($varFieldsMid , 0) }
         :return ($varFieldsHead , $varFieldsMid , $varFieldsTail)
     }
 
     # x:x:x:x:x:x:x:x
-    :return [$funcParseFields $varAddr]
+    :return [$funcParseFields $argAddr]
 }
 
 # Expand an array of eight 16bit integers into a IPv6 address string with all nibbles present.
