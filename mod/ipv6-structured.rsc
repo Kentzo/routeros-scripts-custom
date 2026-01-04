@@ -443,36 +443,40 @@
 :global StructureIP6AddressCommon do={
     :global MakeIP6PrefixMask
 
-    :local varRawAddr [:toip6 $1]
-    :if ([:typeof $varRawAddr] = "nil") do={ :set varRawAddr [:tostr $1] }
-    :if ([:typeof $varRawAddr] = "nil") do={ :error "\"$1\" is invalid IPv6 address" }
+    :local argRawAddr $1
+    :if ([:typeof $argRawAddr] = "ip6-prefix") do={
+        :set argRawAddr [:tostr $argRawAddr]
+    } else={
+        :set argRawAddr [:toip6 $1]
+        :if ([:typeof $argRawAddr] = "nil") do={ :set argRawAddr [:tostr $1] }
+    }
+    :if ([:typeof $argRawAddr] = "nil") do={ :error "\"$argRawAddr\" is invalid IPv6 address" }
 
     :local varAddr
     :local varPrefix
     :local varPrefixLen
-    :if ([:typeof $varRawAddr] = "ip6") do={
-        :set varAddr $varRawAddr
+    :if ([:typeof $argRawAddr] = "ip6") do={
+        :set varAddr $argRawAddr
 
         :if ([:len $2] != 0) do={
             :set varPrefixLen [:tonum $2]
+            :if ([:typeof $varPrefixLen] = "nil") do={ :error "\"$2\" is invalid subnet prefix length" }
         } else={
             :set varPrefixLen 128
         }
-
-        :if ([:typeof $varPrefixLen] = "nil") do={ :error "\"$2\" is invalid subnet prefix length" }
     } else={
-        :local varDelimIdx [:find $varRawAddr "/"]
+        :local varDelimIdx [:find $argRawAddr "/"]
 
         :if ([:typeof $varDelimIdx] != "nil") do={
-            :set varAddr [:toip6 [:pick $varRawAddr 0 $varDelimIdx]]
-            :set varPrefixLen [:tonum [:pick $varRawAddr ($varDelimIdx + 1) [:len $varRawAddr]]]
+            :set varAddr [:toip6 [:pick $argRawAddr 0 $varDelimIdx]]
+            :set varPrefixLen [:tonum [:pick $argRawAddr ($varDelimIdx + 1) [:len $argRawAddr]]]
+            :if ([:typeof $varPrefixLen] = "nil") do={ :error "\"$1\" is invalid IPv6 address" }
         } else={
-            :set varAddr [:toip6 $varRawAddr]
+            :set varAddr [:toip6 $argRawAddr]
             :set varPrefixLen 128
         }
 
         :if ([:typeof $varAddr] = "nil") do={ :error "\"$1\" is invalid IPv6 address" }
-        :if ([:typeof $varPrefixLen] = "nil") do={ :error "\"$1\" is invalid IPv6 address" }
     }
 
     :local varPrefixMask [$MakeIP6PrefixMask $varPrefixLen]
