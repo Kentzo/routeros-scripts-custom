@@ -70,7 +70,7 @@
     :global MakeIPFieldsFromAddress
 
     :local argAddr [:toip6 $1]
-    :if ([:typeof $argAddr] != "ip6") do={ :error "\"$1\" is invalid IPv6 address"}
+    :if ([:typeof $argAddr] = "nil") do={ :error "\"$1\" is invalid IPv6 address"}
     :set argAddr [:tostr $argAddr]
 
     :local varAddrLen [:len $argAddr]
@@ -133,7 +133,7 @@
     :return [$funcParseFields $argAddr]
 }
 
-# Add two IPv6 addresses.
+# Add fields of two IPv6 addresses.
 #
 # - $1 (array): IPv6 address fields
 #   $2 (array): IPv6 address fields
@@ -191,7 +191,7 @@
     return [$MakeIP6AddressFromFields [$AddIP6Fields [$MakeIP6FieldsFromAddress $1] [$MakeIP6FieldsFromAddress $2]]]
 }
 
-# Shift left IPv6 address bits by the specified amount.
+# Shift left fields of IPv6 address bits by the specified amount.
 #
 # - $1 (array): IPv6 address fields
 #   $2 (integer): Number of bits to shift left
@@ -319,7 +319,7 @@
     :global MakeIP6FieldsFromAddress
 
     :local argAddr [:toip6 $1]
-    :if ([:typeof $argAddr] != "ip6") do={ :error "\"$1\" is invalid IPv6 address"}
+    :if ([:typeof $argAddr] = "nil") do={ :error "\"$1\" is invalid IPv6 address"}
 
     :local argMAC $2
     :if (!([:typeof $argMAC] = "str") or !([:len $argMAC] = 17)) do={ :error "\"$2\" is invalid MAC" }
@@ -427,7 +427,7 @@
 # Make a structure of common IPv6 atributes.
 #
 # - $1 (ip6, str): IPv6 address
-#   [$2] (integer): subnet prefix length; defaults to 128
+#   [$2] (integer): Prefix length; defaults to 128
 #
 # - $1 (str, ip6-prefix): IPv6 address-prefix
 #
@@ -479,7 +479,13 @@
     :local varPrefix ($varAddr & $varPrefixMask)
     :local varAddrPrefix [[:parse ":return $varPrefix/$varPrefixLen"]]
 
-    :return {"address"=$varAddr ; "addressPrefix"=$varAddrPrefix ; "prefix"=$varPrefix ; "prefixLength"=$varPrefixLen ; "prefixMask"=$varPrefixMask}
+    :return ({\
+        "address"=$varAddr ;\
+        "addressPrefix"=$varAddrPrefix ;\
+        "prefix"=$varPrefix ;\
+        "prefixLength"=$varPrefixLen ;\
+        "prefixMask"=$varPrefixMask\
+    })
 }
 
 # Make a structure of type-specific IPv6 atributes.
@@ -755,8 +761,6 @@
 }
 
 # Subnet IPv6 address prefixes.
-#
-# - $1 (ip6, str): An IPv6 address
 #
 # - $1 (ip6-prefix, str): An IPv6 prefix
 #   $2 (integer): Relative prefix length
