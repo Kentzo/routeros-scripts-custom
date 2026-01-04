@@ -133,14 +133,129 @@
     :return [$funcParseFields $argAddr]
 }
 
+# Add two IPv6 addresses.
+#
+# - $1 (array): IPv6 address fields
+#   $2 (array): IPv6 address fields
+#
+# > :put [$AddIP6Fields ({8193;3512;0;0;0;0;0;1}) ({0;0;0;0;0;0;0;1})]
+# 8193;3512;0;0;0;0;0;2
+#
+:global AddIP6Fields do={
+    :local varResult ({0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0})
+    :local varCarryOver 0
+    :for fieldIdx from=7 to=0 step=-1 do={
+        :local varTmp ($1->$fieldIdx + $2->$fieldIdx + $varCarryOver)
+
+        :if ($varTmp > 0xffff) do={
+            :set varCarryOver ($varTmp / 0x10000)
+            :set ($varResult->$fieldIdx) ($varTmp % 0x10000)
+        } else={
+            :set varCarryOver 0
+            :set ($varResult->$fieldIdx) $varTmp
+        }
+    }
+
+    if ($varCarryOver = 0) do={
+        return $varResult
+    }
+
+    :set varCarryOver ($varCarryOver - 1)
+    :for fieldIdx from=7 to=0 step=-1 do={
+        :local varTmp ($varResult->$fieldIdx + $varCarryOver)
+        :if ($varTmp > 0xffff) do={
+            :set varCarryOver ($varTmp / 0x10000)
+            :set ($varResult->$fieldIdx) ($varTmp % 0x10000)
+        } else={
+            :set varCarryOver 0
+            :set ($varResult->$fieldIdx) $varTmp
+        }
+    }
+
+    return $varResult
+}
+
+# Add two IPv6 addresses.
+#
+# - $1 (ip6, str): IPv6 address
+#   $2 (ip6, str): IPv6 address
+#
+# > :put [$AddIP6Addresses 2001:db8::1 ::1]
+# 2001:db8::2
+#
+:global AddIP6Addresses do={
+    :global AddIP6Fields
+    :global MakeIP6AddressFromFields
+    :global MakeIP6FieldsFromAddress
+
+    return [$MakeIP6AddressFromFields [$AddIP6Fields [$MakeIP6FieldsFromAddress $1] [$MakeIP6FieldsFromAddress $2]]]
+}
+
+# Shift left IPv6 address bits by the specified amount.
+#
+# - $1 (array): IPv6 address fields
+#   $2 (integer): Number of bits to shift left
+#
+# > :put [$LeftShiftIP6Fields ({8193;3512;0;0;0;0;0;1}) 1]
+# 8193;3512;0;0;0;0;0;2
+#
+:global LeftShiftIP6Fields do={
+    :local argShift [:tonum $2]
+    :local varResult ({0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0})
+
+    :if (($argShift < 0) or ($argShift >= 128)) do={
+        return $varResult
+    }
+    :if ($argShift = 0) do={
+        return $1
+    }
+
+    :for fieldIdx from=7 to=0 step=-1 do={
+        :local varOffset ($argShift / 16)
+        :if ($varOffset > $fieldIdx) do={
+            return $varResult
+        }
+
+        :local varRight (($1->$fieldIdx << ($argShift % 16)) & 0xffff)
+        :if ($varOffset = $fieldIdx) do={
+            :set ($varResult->0) ($varResult->0 | $varRight)
+            return $varResult
+        }
+
+        :local varRightIdx ($fieldIdx - $varOffset)
+        :set ($varResult->$varRightIdx) (($varResult->$varRightIdx) | $varRight)
+
+        :local varLeft ($1->$fieldIdx >> (16 - $argShift % 16))
+        :local varLeftIdx ($varRightIdx + 1)
+        :set ($varResult->$varLeftIdx) (($varResult->$varLeftIdx) | $varLeft)
+    }
+    return $varResult
+}
+
+# Shift left IPv6 address bits by the specified amount.
+#
+# - $1 (ip6, str): IPv6 address
+#   $2 (integer): Number of bits to shift left
+#
+# > :put [$LeftShiftIP6Addresses 2001:db8::1 1]
+# 2001:db8::2
+#
+:global LeftShiftIP6Addresses do={
+    :global LeftShiftIP6Fields
+    :global MakeIP6AddressFromFields
+    :global MakeIP6FieldsFromAddress
+
+    return [$MakeIP6AddressFromFields [$LeftShiftIP6Fields [$MakeIP6FieldsFromAddress $1] $2]]
+}
+
 # Expand an array of eight 16bit integers into a IPv6 address string with all nibbles present.
 #
 # $1 (array): IPv6 address fields
 #
-# > :put [$ExpandIP6AddressFromFields ({8193;3512;0;0;0;0;0;1})]
+# > :put [$ExpandIP6Fields ({8193;3512;0;0;0;0;0;1})]
 # 2001:0db8:0000:0000:0000:0000:0000:0001
 #
-:global ExpandIP6AddressFromFields do={
+:global ExpandIP6Fields do={
     :local varHexMap {"0" ; "1" ; "2" ; "3" ; "4" ; "5" ; "6" ; "7" ; "8" ; "9" ; "a" ; "b" ; "c" ; "d" ; "e" ; "f"}
     :local varNibbleMask {0x000f ; 0x00f0 ; 0x0f00 ; 0xf000}
     :local varAddr ""
@@ -172,10 +287,10 @@
 # 2001:0db8:0000:0000:0000:0000:0000:0001
 #
 :global ExpandIP6Address do={
-    :global ExpandIP6AddressFromFields
+    :global ExpandIP6Fields
     :global MakeIP6FieldsFromAddress
 
-    :return [$ExpandIP6AddressFromFields [$MakeIP6FieldsFromAddress $1]]
+    :return [$ExpandIP6Fields [$MakeIP6FieldsFromAddress $1]]
 }
 
 # Make an IPv6 address from an array of eight 16bit integers.
@@ -186,9 +301,9 @@
 # 2001:db8::1
 #
 :global MakeIP6AddressFromFields do={
-    :global ExpandIP6AddressFromFields
+    :global ExpandIP6Fields
 
-    :return [:toip6 [$ExpandIP6AddressFromFields $1]]
+    :return [:toip6 [$ExpandIP6Fields $1]]
 }
 
 # Make an IPv6 address from a MAC via the EUI-64 method.
@@ -637,4 +752,51 @@
     :local varTmp ({})
     :foreach prefixStruct in=$varCoalescedPrefixes do={ :set varTmp ($varTmp , $prefixStruct->"addressPrefix") }
     :return $varTmp
+}
+
+# Subnet IPv6 address prefixes.
+#
+# - $1 (ip6, str): An IPv6 address
+#
+# - $1 (ip6-prefix, str): An IPv6 prefix
+#   $2 (integer): Relative prefix length
+
+# - $1 (array): An IPv6 address structure
+#   $2 (integer): Relative prefix length
+#
+# > :put [$SubnetIP6Prefix 2001:db8::/64 1]
+# 2001:db8::/65;2001:db8:0:0:8000::/65
+#
+:global SubnetIP6Prefix do={
+    :global AddIP6Addresses
+    :global LeftShiftIP6Addresses
+    :global StructureIP6AddressCommon
+
+    :local varPrefixStruct
+    :if ([:typeof $1] = "array") do={
+        :set varPrefixStruct $1
+    } else={
+        :set varPrefixStruct [$StructureIP6AddressCommon $1]
+    }
+
+    :local argPrefixLength [:tonum $2]
+    :if (($varPrefixStruct->"prefixLength" + $argPrefixLength) > 128) do={
+        :set argPrefixLength (128 - $varPrefixStruct->"prefixLength")
+    }
+
+    :local varSubnets ({})
+    :local varSubnetsCount (1 << $argPrefixLength)
+    :local varSubnetPrefixLen ($varPrefixStruct->"prefixLength" + $argPrefixLength)
+    :local varSubnetIDShift (128 - $varSubnetPrefixLen)
+    :local varSubnetID [:toip6 ::]
+    :local varSubnetInc [$LeftShiftIP6Addresses ::1 $varSubnetIDShift]
+    :for subnetIdx from=0 to=($varSubnetsCount - 1) step=1 do={
+        :local varSubnetPrefix ($varPrefixStruct->"prefix" | $varSubnetID)
+        :local varSubnetAddrPrefix [[:parse ":return $varSubnetPrefix/$varSubnetPrefixLen"]]
+        :set varSubnets ($varSubnets , $varSubnetAddrPrefix)
+
+        :set varSubnetID [$AddIP6Addresses $varSubnetID $varSubnetInc]
+    }
+
+    return $varSubnets
 }

@@ -291,3 +291,46 @@
     :foreach prefixStruct in=$varCoalescedPrefixes do={ :set varTmp ($varTmp , $prefixStruct->"addressPrefix") }
     :return $varTmp
 }
+
+# Subnet IPv4 address prefixes.
+#
+# - $1 (ip-prefix, ip, str): An IPv4 prefix
+#   $2 (integer): Relative prefix length
+#
+# - $1 (array): An IPv4 address structure
+#   $2 (integer): Relative prefix length
+#
+# > :put [$SubnetIPPrefix 192.0.2.0/24 1]
+# 192.0.2.0/25;192.0.2.128/25
+#
+:global SubnetIPPrefix do={
+    :global StructureIPAddressCommon
+
+    :local varPrefixStruct
+    :if ([:typeof $1] = "array") do={
+        :set varPrefixStruct $1
+    } else={
+        :set varPrefixStruct [$StructureIPAddressCommon $1]
+    }
+
+    :local argPrefixLength [:tonum $2]
+    :if (($varPrefixStruct->"prefixLength" + $argPrefixLength) > 32) do={
+        :set argPrefixLength (32 - $varPrefixStruct->"prefixLength")
+    }
+
+    :local varSubnets ({})
+    :local varSubnetsCount (1 << $argPrefixLength)
+    :local varSubnetPrefixLen ($varPrefixStruct->"prefixLength" + $argPrefixLength)
+    :local varSubnetIDShift (32 - $varSubnetPrefixLen)
+    :local varSubnetID [:toip 0.0.0.0]
+    :local varSubnetInc (0.0.0.1 << $varSubnetIDShift)
+    :for subnetIdx from=0 to=($varSubnetsCount - 1) step=1 do={
+        :local varSubnetPrefix ($varPrefixStruct->"prefix" | $varSubnetID)
+        :local varSubnetAddrPrefix [[:parse ":return $varSubnetPrefix/$varSubnetPrefixLen"]]
+        :set varSubnets ($varSubnets , $varSubnetAddrPrefix)
+
+        :set varSubnetID ($varSubnetID + $varSubnetInc)
+    }
+
+    return $varSubnets
+}
