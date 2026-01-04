@@ -31,7 +31,7 @@
                 :set varMask ($varMask . "f")
                 :set varRemBits ($varRemBits - 4)
             } else={
-                :set varMask ($varMask . ({0;1;3;7}->($varRemBits % 4)))
+                :set varMask ($varMask . ({0;8;c;e}->($varRemBits % 4)))
                 :set varRemBits 0
             }
         }
