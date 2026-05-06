@@ -444,9 +444,7 @@
     :global MakeIP6PrefixMask
 
     :local argRawAddr $1
-    :if ([:typeof $argRawAddr] = "ip6-prefix") do={
-        :set argRawAddr [:tostr $argRawAddr]
-    } else={
+    :if ([:typeof $argRawAddr] != "ip6-prefix") do={
         :set argRawAddr [:toip6 $1]
         :if ([:typeof $argRawAddr] = "nil") do={ :set argRawAddr [:tostr $1] }
     }
@@ -465,14 +463,22 @@
             :set varPrefixLen 128
         }
     } else={
+        # Starting with 7.21 :toip6 can extract IPv6 address from ip6-prefix
+        :set varAddr [:toip6 $argRawAddr]
+        :set argRawAddr [:tostr $argRawAddr]
+
         :local varDelimIdx [:find $argRawAddr "/"]
 
         :if ([:typeof $varDelimIdx] != "nil") do={
-            :set varAddr [:toip6 [:pick $argRawAddr 0 $varDelimIdx]]
+            :if ([:typeof $varAddr] = "nil") do={
+                :set varAddr [:toip6 [:pick $argRawAddr 0 $varDelimIdx]]
+            }
             :set varPrefixLen [:tonum [:pick $argRawAddr ($varDelimIdx + 1) [:len $argRawAddr]]]
             :if ([:typeof $varPrefixLen] = "nil") do={ :error "\"$1\" is invalid IPv6 address" }
         } else={
-            :set varAddr [:toip6 $argRawAddr]
+            :if ([:typeof $varAddr] = "nil") do={
+                :set varAddr [:toip6 $argRawAddr]
+            }
             :set varPrefixLen 128
         }
 

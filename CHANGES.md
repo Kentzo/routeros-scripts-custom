@@ -1,3 +1,9 @@
+## 1.0.2
+
+### Bugfixes
+
+- `$StructureIP6AddressCommon` loses address bits when parsing ip6-prefix on 7.21
+
 ## 1.0.1
 
 ### Bugfixes
