@@ -4,6 +4,7 @@
 
 - `$StructureIP6AddressCommon` loses address bits when parsing ip6-prefix on 7.21
 - Usage of removed `/file/print` arguments
+- `$MakeIP6PrefixMask` missed non-0xf bits
 
 ## 1.0.1
 
