@@ -3,6 +3,7 @@
 ### Bugfixes
 
 - `$StructureIP6AddressCommon` loses address bits when parsing ip6-prefix on 7.21
+- Usage of removed `/file/print` arguments
 
 ## 1.0.1
 

@@ -1209,8 +1209,7 @@ $varMainContentsDefault\n\
 
     :local varItems [/file/print\
         as-value\
-        list\
-        path=$cfgNSRoot\
+        path="$cfgNSRoot/zones"\
         where\
             type!=directory\
             name~"^$cfgNSRoot/zones/(db|data)\\."]
