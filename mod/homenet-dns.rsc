@@ -172,8 +172,7 @@
 #   > /interface/veth/add address=192.0.2.53/31,2001:db8:53::1/127 gateway=192.0.2.52 gateway6=2001:db8:53:: name=veth-coredns
 #   > /ip/address/add address=192.0.2.52/31 interface=veth-coredns
 #   > /ipv6/address/add address=2001:db8:53::/127 advertise=no interface=veth-coredns no-dad=yes
-#   > /container/mounts/add dst=/etc/coredns/ name=coredns src=/usb1-part2/coredns/config
-#   > /container/add file=routeros_coredns.tar.gz interface=veth-coredns root-dir=usb1-part2/coredns/root mounts=coredns workdir=/ logging=yes start-on-boot=yes
+#   > /container/add file=routeros_coredns.tar.gz interface=veth-coredns root-dir=usb1-part2/coredns/root mount=/usb1-part2/coredns/config/:/etc/coredns/:ro workdir=/ logging=yes start-on-boot=yes
 #   > # Add $HomeDNSConfig definition in global-config-override
 #   > /system/scheduler/add name=update-homenet-dns interval=24h start-time=03:00:00 on-event=setup-homenet-dns policy=read,write,sensitive
 #   > # Also run it in /ipv6/dhcp-client's script
@@ -1252,7 +1251,7 @@ $varMainContentsDefault\n\
     }
     :set ($varConfig->"nsContainer") $cfgNSContainer
 
-    :local varContainer ([/container/print as-value proplist=interface,mounts where name=$cfgNSContainer]->0)
+    :local varContainer ([/container/print as-value proplist=interface,mount,mountlists where name=$cfgNSContainer]->0)
     :if ([:len $varContainer] = 0) do={
         $LogPrint error $varJobName ("Container \"$cfgNSContainer\" does not exist")
         :error false
@@ -1260,11 +1259,18 @@ $varMainContentsDefault\n\
     :set ($varState->"varContainerID") ($varContainer->".id")
 
     :local cfgNSRoot ($HomenetDNSConfig->"nsRoot")
-    :if ([:len $cfgNSRoot] = 0) do={
-        :local varMount ($varContainer->"mounts"->0)
-        :set cfgNSRoot ([/container/mounts/print as-value proplist=src where name=$varMount]->0->"src")
+    if ([:len $cfgNSRoot] = 0) do={
+        :local varMount (($varContainer->"mount")->0)
+        :local varDelimIdx [:find $varMount ":" 0]
+        :set cfgNSRoot [:pick $varMount 0 $varDelimIdx]
         :if ([:pick $cfgNSRoot 0] = "/") do={
-            # /file doesn't like paths starting with "/"
+            :set cfgNSRoot [:pick $cfgNSRoot 1 [:len $cfgNSRoot]]
+        }
+    }
+    if ([:len $cfgNSRoot] = 0) do={
+        :local varMount (($varContainer->"mountlists")->0)
+        :set cfgNSRoot (([/container/mounts/print as-value proplist=src where list=$varMount]->0)->"src")
+        :if ([:pick $cfgNSRoot 0] = "/") do={
             :set cfgNSRoot [:pick $cfgNSRoot 1 [:len $cfgNSRoot]]
         }
     }
