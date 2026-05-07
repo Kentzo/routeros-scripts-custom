@@ -134,7 +134,6 @@
 #   - mod/kentzo-functions
 #
 # Caveats and Known Bugs:
-#   - RouterOS (7.18.2) returns incorrect IPv6 address for a veth interface: specify manually
 #   - RouterOS's (7.18.2) DNS Resolver rewrites NXDOMAIN responses from a forwarder as NODATA and removes the authority section
 #   - macOS (15.4) cannot discover services over unicast DNS when iCloud Private Relay is on
 #   - When using TLS in CoreDNS, make sure that the container image is built with up to date CA certificates
@@ -142,9 +141,9 @@
 # Example:
 #   # On the Host
 #   $ docker build -t routeros_coredns:latest -f - . <<'END'
-#       FROM --platform=$BUILDPLATFORM golang:1.23.8 AS build
+#       FROM --platform=$BUILDPLATFORM golang:1.26.3 AS build
 #       WORKDIR /src
-#       ADD https://github.com/coredns/coredns.git\#v1.12.1 /src
+#       ADD https://github.com/coredns/coredns.git\#v1.14.3 /src
 #       COPY <<EOF /src/plugin.cfg
 #       reload:reload
 #       errors:errors
@@ -165,14 +164,14 @@
 #       EXPOSE 53 53/udp
 #       ENTRYPOINT ["/bin/coredns"]
 #       END
-#   $ docker save routeros/coredns:latest | gzip > routeros_coredns.tar.gz
+#   $ docker save routeros_coredns:latest | gzip > routeros_coredns.tar.gz
 #   $ scp routeros_coredns.tar.gz <router-address>:/
 #
 #   # On the Router
 #   > /interface/veth/add address=192.0.2.53/31,2001:db8:53::1/127 gateway=192.0.2.52 gateway6=2001:db8:53:: name=veth-coredns
 #   > /ip/address/add address=192.0.2.52/31 interface=veth-coredns
 #   > /ipv6/address/add address=2001:db8:53::/127 advertise=no interface=veth-coredns no-dad=yes
-#   > /container/add file=routeros_coredns.tar.gz interface=veth-coredns root-dir=usb1-part2/coredns/root mount=/usb1-part2/coredns/config/:/etc/coredns/:ro workdir=/ logging=yes start-on-boot=yes
+#   > /container/add file=routeros_coredns.tar.gz interface=veth-coredns root-dir=usb1-part2/coredns/root mount=/usb1-part2/coredns/config/:/etc/coredns/:ro workdir=/etc/coredns logging=yes start-on-boot=yes
 #   > # Add $HomeDNSConfig definition in global-config-override
 #   > /system/scheduler/add name=update-homenet-dns interval=24h start-time=03:00:00 on-event=setup-homenet-dns policy=read,write,sensitive
 #   > # Also run it in /ipv6/dhcp-client's script
@@ -1278,7 +1277,7 @@ $varMainContentsDefault\n\
         $LogPrint error $varJobName ("nsRoot must not be empty")
         :error false
     }
-    :local cfgNSRootType [/file/get $cfgNSRoot value-name="type"]
+    :local cfgNSRootType [/file/get $cfgNSRoot value-name=type]
     :if ($cfgNSRootType != "directory" and $cfgNSRootType != "container store") do={
         $LogPrint error $varJobName ("nsRoot must be an existing directory")
         :error false
