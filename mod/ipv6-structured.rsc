@@ -364,6 +364,7 @@
 # fd01:203:405:1::1234
 #
 :global MakeIP6AddressFromNPT do={
+    :global MakeIP6SuffixMask
     :global MakeIP6AddressFromFields
     :global StructureIP6Address
 
@@ -635,7 +636,7 @@
 
         :local subnetIDLen (64 - $globalIDLen)
         :if ($subnetIDLen > 0) do={
-            :set subnetID ($varAddr & (~([$MakeIP6PrefixMask $globalIDLen])) & (~([$MakeIP6SuffixMask 64])))
+            :set subnetID ($argAddr & (~([$MakeIP6PrefixMask $globalIDLen])) & (~([$MakeIP6SuffixMask 64])))
         }
     }
 
