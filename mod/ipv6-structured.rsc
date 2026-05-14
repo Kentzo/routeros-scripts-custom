@@ -558,21 +558,25 @@
     :if ($argAddr = ::1) do={ :return {"type"="loopback" ; "fields"=$varFields} }
     :if ($argAddr in fe80::/10) do={ :return {"type"="link-local" ; "fields"=$varFields} }
 
-    :if (($argAddr in ::/96) or ($argAddr in ::ffff:0:0/96)) do={
+    :if (($varFields->0) = 0 and ($varFields->1) = 0 and ($varFields->2) = 0 and ($varFields->3) = 0 and ($varFields->4) = 0 and ($varFields->5) = 0) do={
         :local varIP4 (\
             ((($varFields->6) & 0xff00) >> 16) . "." .\
-            (($varFields->6) & 255) . "." .\
+            (($varFields->6) & 0x00ff) . "." .\
             ((($varFields->7) & 0xff00) >> 16) . "." .\
             (($varFields->7) & 0x00ff)\
         )
-        :local varDetail {"fields"=$varFields ; "ip4"=$varIP4}
+        :local varDetail {"type"="ip4-compatible" ; "fields"=$varFields ; "ip4"=$varIP4}
+        :return $varDetail
+    }
 
-        :if (($varFields->5) = 0xffff) do={
-            :set varDetail ($varDetail , {"type"="ip4-mapped"})
-        } else={
-            :set varDetail ($varDetail , {"type"="ip4-compatible"})
-        }
-
+    :if (($varFields->0) = 0 and ($varFields->1) = 0 and ($varFields->2) = 0 and ($varFields->3) = 0 and ($varFields->4) = 0 and ($varFields->5) = 0xffff) do={
+        :local varIP4 (\
+            ((($varFields->6) & 0xff00) >> 16) . "." .\
+            (($varFields->6) & 0x00ff) . "." .\
+            ((($varFields->7) & 0xff00) >> 16) . "." .\
+            (($varFields->7) & 0x00ff)\
+        )
+        :local varDetail {"type"="ip4-mapped" ; "fields"=$varFields ; "ip4"=$varIP4}
         :return $varDetail
     }
 

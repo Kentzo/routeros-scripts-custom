@@ -1,3 +1,15 @@
+## 1.0.4
+
+### Bugfixes
+
+- `StructureIP6AddressDetail` couldn't detect IPv4-compatible and IPv4-mapped (RFC4291) addresses
+
+## 1.0.3
+
+### Bugfixes
+
+- $HomenetDNS->"Initialize" incorrectly read container mounts
+
 ## 1.0.2
 
 ### Bugfixes
