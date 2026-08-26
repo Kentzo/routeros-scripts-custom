@@ -220,6 +220,8 @@
 }
 
 :set ($HomenetDNS->"MakeDefaultIPNetworksExtra") do={
+    :global DeduplicateIPAddresses
+
     :local varNetworks ({})
 
     # TODO: Only consider networks that are used by DHCPv4 servers running
@@ -232,11 +234,14 @@
     :foreach varI in=$varItems do={
         :set varNetworks ($varNetworks , $varI->"address")
     }
+    :set varNetworks [$DeduplicateIPAddresses $varNetworks]
 
     :return $varNetworks
 }
 
 :set ($HomenetDNS->"MakeDefaultIP6NetworksExtra") do={
+    :global DeduplicateIP6Addresses
+
     :local argConfig $0
 
     :local cfgInterfacesRegex ($argConfig->"interfacesRegex")
@@ -286,6 +291,7 @@
             :set varNetworks ($varNetworks , [/ipv6/pool/get $varPrefixPool value-name=prefix])
         }
     }
+    :set varNetworks [$DeduplicateIP6Addresses $varNetworks]
 
     :return $varNetworks
 }
