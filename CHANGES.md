@@ -1,8 +1,12 @@
 ## 1.0.4
 
+- Move doc in mod/homenet-dns.rsc to mod/homenet.md to stay under `/file/get` limit
+
 ### Bugfixes
 
 - `StructureIP6AddressDetail` couldn't detect IPv4-compatible and IPv4-mapped (RFC4291) addresses
+- Failure to detect missing files caused missing zone definitions
+- Duplicates were allowed in $HomenetDNSConfig->"ipNetworksExtra" and $HomenetDNSConfig->"ip6NetworksExtra"
 
 ## 1.0.3
 
