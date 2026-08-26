@@ -181,6 +181,7 @@
     :local argContents $1
 
     :onerror varError in={
+        /file/get $argPath value-name=size
         /file/set $argPath contents=$argContents
     } do={
         :if ($varError ~ "no such item") do={
