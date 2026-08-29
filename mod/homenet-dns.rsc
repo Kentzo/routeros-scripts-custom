@@ -145,12 +145,9 @@
 }
 
 :set ($HomenetDNS->"RestartContainer") do={
-    :global HomenetDNS
-
     :local argContainerID $0
 
-    ($HomenetDNS->"StopContainer") $argContainerID
-    /container/start $argContainerID
+    /container/restart $argContainerID
 }
 
 :set ($HomenetDNS->"FileExists") do={
