@@ -586,7 +586,7 @@
                     !disabled\
                     mac-address=$varAddress\
                     name~$cfgInterfacesRegex]
-            :foreach varI in=$varItem do={
+            :foreach varI in=$varItems do={
                 :local varInt ($varI->"name")
                 :set ($varAllInterfaces->$varInt) $varInt
             }
