@@ -1,3 +1,13 @@
+## 1.0.5
+
+- Drop mod/homenet.md in favor of https://gist.github.com/Kentzo/36dee5b82ba1b25bec0167a5e07c565f
+- nsContainer now defaults to "homenet-dns"
+- Rehaul default configuration to resolve via Cloudflare
+
+### Bugfixes
+
+- Failure to lookup interfaces by MAC
+
 ## 1.0.4
 
 - Move doc in mod/homenet-dns.rsc to mod/homenet.md to stay under `/file/get` limit
