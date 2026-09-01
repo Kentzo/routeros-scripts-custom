@@ -255,6 +255,12 @@
     /container/restart $argContainerID
 }
 
+:set ($HomenetDNS->"ReloadContainer") do={
+    :local argContainerID $0
+
+    /container/kill signal=10-SIGUSR1 $argContainerID
+}
+
 :set ($HomenetDNS->"FileExists") do={
     :local argPath $0
 
@@ -1033,7 +1039,6 @@ $varMainContentsDefault\n\
         $LogPrint debug $varJobName ("reusing Corefile")
     }
     :set ($varNewState->"Corefile") ({"hash"=$varMainNewHash})
-    :set ($varNewState->"useZeroDowntime") [:tostr $cfgUseZeroDowntime]
 
     # Clean up files of zones that do not exist anymore.
     :local varItems [/file/print\
@@ -1056,14 +1061,16 @@ $varMainContentsDefault\n\
         $LogPrint info $varJobName ("configuration has changed")
         ($HomenetDNS->"WriteFile") $varStatePath [:serialize value=$varNewState to=json options=json.no-string-conversion]
     }
-
     :local varIsRunning [/container/get $varContainerID value-name=running]
-    # CoreDNS won't notice switch to Zero Downtime without restart.
-    :local varOldZeroDowntime [:tonum ($varOldState->"useZeroDowntime")]
-    :if (($varHasChanges and $varOldZeroDowntime <= 0) or $varIsRunning != true) do={
+    :if ($varHasChanges or $varIsRunning != true) do={
         :local varName [/container/get $varContainerID value-name=name]
-        $LogPrint info $varJobName ("restarting container $varName")
-        ($HomenetDNS->"RestartContainer") $varContainerID
+        :if ($cfgUseZeroDowntime) do={
+            $LogPrint info $varJobName ("reloading container $varName")
+            ($HomenetDNS->"ReloadContainer") $varContainerID
+        } else={
+            $LogPrint info $varJobName ("restarting container $varName")
+            ($HomenetDNS->"RestartContainer") $varContainerID
+        }
     }
 }
 
@@ -1321,25 +1328,14 @@ $varMainContentsDefault\n\
     }
     :set ($varConfig->"useDNSForwarder" $cfgUseDNSForwarder)
 
-    :local cfgUseZeroDowntimeDefault 0
+    :local cfgUseZeroDowntimeDefault true
     :local cfgUseZeroDowntime ($HomenetDNSConfig->"useZeroDowntime")
     :if ([:typeof $cfgUseZeroDowntime] = "nothing") do={
         :set cfgUseZeroDowntime $cfgUseZeroDowntimeDefault
     } else={
-        :if ([:typeof $cfgUseZeroDowntime] = "bool") do={
-            :if ($cfgUseZeroDowntime) do={
-                :set cfgUseZeroDowntime 60
-            } else={
-                :set cfgUseZeroDowntime 0
-            }
-        } else={
-            :set cfgUseZeroDowntime [:tonum $cfgUseZeroDowntime]
-        }
+        :set cfgUseZeroDowntime [:tobool $cfgUseZeroDowntime]
     }
-    :if ($cfgUseZeroDowntime < 0) do={
-        :set cfgUseZeroDowntime 0
-    }
-    :set ($varConfig->"useZeroDowntime" $cfgUseZeroDowntime)
+    :set ($varConfig->"useZeroDowntime") $cfgUseZeroDowntime
 
     :set ($varConfig->"corefileExtra") [:tostr ($HomenetDNSConfig->"corefileExtra")]
     :set ($varConfig->"corefileOverride") ($HomenetDNSConfig->"corefileOverride")
