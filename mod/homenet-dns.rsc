@@ -1,6 +1,111 @@
 #!rsc by RouterOS
 
-# See homenet-dns.md
+# Authoritative DNS Server on RouterOS with CoreDNS
+#
+# Introduction and discussion: https://gist.github.com/Kentzo/36dee5b82ba1b25bec0167a5e07c565f
+#
+# :global HomenetDNSConfig ({
+#     # (str): Regex-escaped unique ID of the managed objects
+#     "managedID"="01234567-1337-dead-beef-0123456789ab";
+#
+#     # (str): Name of the CoreDNS container
+#     "nsContainer"="homenet-dns";
+#
+#     # (str): Optional path to the CoreDNS working directory that will be mounted into the container; defaults to the container's first mount
+#     # "nsRoot"="";
+#
+#     # (ip, str): Optional IPv4 address of the DNS server in zone files; defaults to the container's first IPv4 address
+#     # "nsIPAddress"=;
+#
+#     #(ip, str): Optional IPv6 address of the DNS server in zone files; defaults to the container's first IPv6 address
+#     # "nsIP6Address"=;
+#
+#     # (str): Optional default domain name for hosts and services; defaults to global-config's $Domain, if present, otherwise "home.arpa."
+#     # "domain"="home.arpa.";
+#
+#     # (num): Optional TTL in seconds for generated DNS resource records; defaults to 3600
+#     # "ttl"=3600;
+#
+#     # (array): Optional array of hosts for address resource records; defaults to empty
+#     #   - name: Hostname (and subdomain) relative to the "domain"
+#     #   - [domain]: Optional domain of the host; defaults to config's "domain"
+#     #   - addresses: An array of IPv4, IPv6 or MAC addresses
+#     # "hosts"={
+#     #     {"name"="gateway" ; "addresses"={192.0.2.1 ; 2001:db8::1}};
+#     # };
+#
+#     # (array): Optional array of DNS-SD services (RFC 6763); defaults to empty
+#     #   - name: <Instance> of Service Instance Name, encoded and escaped, e.g. "Home\\ Media"
+#     #   - service: <Service> of Service Instance Name, e.g. "_smb._tcp"
+#     #   - [domain]: Optional <Domain> of Service Instance Name, e.g. "home.arpa."; defaults to config's "domain"
+#     #   - host: Hostname that provides service, e.g. "gateway" (relative to "domain") or "gateway.home.arpa." (absolute)
+#     #   - port: Port on the "host" where the service is available, e.g. "445"
+#     #   - [txt]: Optional TXT record(s) associated with the service instance
+#     #     - {str}: one TXT record with multiple values, e.g. {"path"="/usb1-part2/media" ; "u=guest"} -> TXT ("path=/usb1-part2/media" "u=guest")
+#     #     - {{str}}: Multiple TXT records where each follows the rule above
+#     # "services"={
+#     #     {"name"="Home\\ Media" ; "service"="_smb._tcp" ; "host"="gateway" ; "port"=445 ; txt={"path=/media" ; "u"="guest"}};
+#     # };
+#
+#     # (bool): Optional flag to control whether /ip/dns/forwdarder for all configured zones is set up; defaults to `/ip/dns/get value-name=allow-remote-requests`
+#     # "useDNSForwarder"=yes;
+#
+#     # (array): Optional array of destination endpoints (see https://coredns.io/plugins/forward/ for syntax) to forward unhandled queries; defaults to Cloudflare Family DoT
+#     # "useForward"={"tls://[2606:4700:4700::1112]%one.one.one.one"}
+#
+#     # (bool, num, time): Optional flag to control whether CoreDNS uses zero-downtime deployment; defaults to yes
+#     #   - If yes or >0 then the SIGHUP signal is sent to the container
+#     #   - If no or <=0 then the container is restarted
+#     # "useZeroDowntime"=no;
+#
+#     # (str): Optional regex to filter IPv4 ARP when resolving hosts; defaults to "(permanent|reachable|stale)"
+#     # "ipARPStatusRegex"="(permanent|reachable|stale)";
+#
+#     # (str): Optional regex to filter IPv6 neighbors when resolving hosts; defaults to "(noarp|reachable|stale)"
+#     # "ip6NeighborStatusRegex"="(noarp|reachable|stale)";
+#
+#     # (str): Optional regex to filter interfaces when resolving addresses of hosts and delegated networks; defaults to ".*"
+#     # "interfacesRegex"=".*";
+#
+#     # (array): Optional array of additional IPv4 networks delegated to the router; defaults to advertised prefixes
+#     # "ipNetworksExtra"={};
+#
+#     # (array): Optional array of additional IPv6 networks delegated to the router; defaults to delegated and advertised prefixes
+#     # "ip6NetworksExtra"={};
+#
+#     # (array): Optional array of additional domains delegated to the router
+#     # "domainsExtra"={};
+#
+#     # (array): Optional array of additional resource records
+#     #   - key: Zone domain name
+#     #   - value: An array of additional resource records to append to the zone file
+#     # "zonesExtra"={
+#     #     "home.arpa."={
+#     #         "samba CNAME gateway";
+#     #     }
+#     # };
+#
+#     # (str): Optional CoreDNS's cache plugin override, passed verbatim; defaults to 1 week
+#     # "cacheOverride"="cache 604800";
+#
+#     # (str): Optional additional CoreDNS configuration for the default server block, passed verbatim
+#     # "corefileExtra"="";
+#
+#     # (str): Optional CoreDNS configuration override, passed verbatim; default content is available via the "homenet-dns-default" snippet
+#     # "corefileOverride"="";
+# })
+#
+#
+# Changes:
+#    - /container
+#    - /file
+#    - /ip/dns/forwarders
+#    - /ip/dns/static
+#
+# Requirements:
+#    - mod/ipv4-structured
+#    - mod/ipv6-structured
+#    - mod/kentzo-functions
 
 :global HomenetDNS
 :global HomenetDNSConfig
