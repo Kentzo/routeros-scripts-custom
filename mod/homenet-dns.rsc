@@ -905,12 +905,11 @@
     :local varContainerID ($argState->"varContainerID")
     :local varConfig ($argState->"varConfig")
     :local cfgDomain ($varConfig->"domain")
-    :local cfgNSContainer ($varConfig->"nsContainer")
     :local cfgNSRoot ($varConfig->"nsRoot")
-    :local cfgNSIPAddress ($varConfig->"nsIPAddress")
-    :local cfgNSIP6Address ($varConfig->"nsIP6Address")
     :local cfgTTL ($varConfig->"ttl")
+    :local cfgUseForward ($varConfig->"useForward")
     :local cfgUseZeroDowntime ($varConfig->"useZeroDowntime")
+    :local cfgCacheOverride ($varConfig->"cacheOverride")
     :local cfgCorefileExtra ($varConfig->"corefileExtra")
     :local cfgCorefileOverride ($varConfig->"corefileOverride")
 
@@ -929,7 +928,7 @@
         :local varDBPath "$cfgNSRoot/zones/db.$varOrigin"
         :local varDataPath "$cfgNSRoot/zones/data.$varOrigin"
 
-        :local varDataContents ""
+        :local varDataContents
         :foreach varI in=$varRecords do={
             :set varDataContents ($varDataContents . "$varI\n")
         }
@@ -958,76 +957,109 @@
         }
     }
 
-    # Prepre Corefile.dns-sd
-    :local varDNSSDPath "$cfgNSRoot/Corefile.dns-sd"
-    # The list of subdomains with services is one for the entire LAN. The rewrite rule redirects all requests for DNS-SD
-    # browsing subdomains to $cfgDomain. This avoid unnecessary resource records.
-    :local varDNSSDContents "rewrite stop name regex ^(b|db|lb)\\._dns-sd\\._udp\\.(.*)\$ {1}._dns-sd._udp.$cfgDomain answer auto\n"
-    :local varDNSSDOldHash ($varOldState->"Corefile.dns-sd"->"hash")
-    :local varDNSSDNewHash [:convert $varDNSSDContents transform=md5]
-    :if ($varDNSSDOldHash != $varDNSSDNewHash or [($HomenetDNS->"FileExists") $varDNSSDPath] = false) do={
-        $LogPrint info $varJobName ("updating Corefile.dns-sd")
-        ($HomenetDNS->"WriteFile") $varDNSSDPath $varDNSSDContents
-        :set varHasChanges true
-    } else={
-        $LogPrint debug $varJobName ("reusing Corefile.dns-sd")
+    # (homenet-dns-cache)
+    :local varCacheContents "\
+(homenet-dns-cache) {\n\
+\_   cache 604800\n\
+}"
+    :if ([:len $cfgCacheOverride] > 0) do={
+        :set varCacheContents "\
+(homenet-dns-cache) {\n\
+$cfgCacheOverride\n\
+}"
     }
-    :set ($varNewState->"Corefile.dns-sd") ({"hash"=$varDNSSDNewHash})
 
-    # Prepre Corefile.extra
-    :local varExtraPath "$cfgNSRoot/Corefile.extra"
-    :local varExtraContents $cfgCorefileExtra
-    :local varExtraOldHash ($varOldState->"Corefile.extra"->"hash")
-    :local varExtraNewHash [:convert $varExtraContents transform=md5]
-    :if ($varExtraOldHash != $varExtraNewHash or [($HomenetDNS->"FileExists") $varExtraPath] = false) do={
-        $LogPrint info $varJobName ("updating Corefile.extra")
-        ($HomenetDNS->"WriteFile") $varExtraPath $varExtraContents
-        :set varHasChanges true
-    } else={
-        $LogPrint debug $varJobName ("reusing Corefile.extra")
-    }
-    :set ($varNewState->"Corefile.extra") ({"hash"=$varExtraNewHash})
+    # (homenet-dns-dnssd)
+    # Every locally-served zone recommends $cfgDomain.
+    :local varDNSSDContents "\
+(homenet-dns-dnssd) {\n\
+\_   rewrite stop name regex ^(b|db|lb)\\._dns-sd\\._udp\\.(.*)\$ {1}._dns-sd._udp.$cfgDomain answer auto\n\
+}"
 
-    # Prepare Corefile
-    :local varMainPath "$cfgNSRoot/Corefile"
+    # (homenet-dns-extra)
+    :local varExtraContents "\
+(homenet-dns-extra) {\n\
+$cfgCorefileExtra\n\
+}"
 
-    :local varReloadContents ""
-    :local varAutoContents ""
-    :if ($cfgUseZeroDowntime) do={
-        :set varReloadContents ("reload " . $cfgUseZeroDowntime . "s")
-        :set varAutoContents "\
+    # (homenet-dns-auto)
+    :local varAutoContents "\
+(homenet-dns-auto) {\n\
 \_   auto {\n\
 \_       directory zones\n\
-\_       reload $($cfgUseZeroDowntime)s\n\
-\_   }"
-    } else={
-            :set varAutoContents "\
-\_   auto {\n\
-\_       directory zones\n\
-\_       reload 0\n\
-\_   }"
+\_   }\n\
+}"
+
+    # (homenet-dns-forward)
+    :local varForwardContents "(homenet-dns-forward) {\n}"
+    :local varForwardTo
+    :foreach varI in=$cfgUseForward do={
+        :local varEndpoint [:tostr $varI]
+        :if ([:len $varEndpoint] > 0) do={
+            :set varForwardTo "$varForwardTo $varEndpoint"
+        }
     }
-    :local varMainContentsDefault "\
-(homenet-dns-default) {\n\
-\_   errors\n\
-$varReloadContents\n\
-\n\
-\_   import Corefile.extra\n\
-\_   import Corefile.dns-sd\n\
-$varAutoContents\n\
+    :if ([:len $varForwardTo] > 0) do={
+        :set varForwardContents "\
+(homenet-dns-forward) {\n\
+\_   forward . $varForwardTo {\n\
+\_       max_fails 0\n\
+\_       max_idle_conns 64\n\
+\_       max_concurrent 2048\n\
+\_   }\n\
+}"
+    }
+
+    # (homenet-dns-header)
+    :local varHeaderContents "(homenet-dns-header) {\n}"
+    :if ([:len $varForwardTo] > 0) do={
+        :set varHeaderContents "\
+(homenet-dns-header) {\n\
+\_   header {\n\
+\_       response set ra\n\
+\_   }
+}"
+    }
+
+    # (homenet-dns-catchall)
+    :local varCatchAllContents "\
+(homenet-dns-catchall) {\n\
 \_   template ANY ANY {\n\
 \_       rcode REFUSED\n\
 \_   }\n\
 }"
-    :local varMainContents
-    :if ([:typeof $cfgCorefileOverride] = "nothing") do={
-        :set varMainContents "\
-$varMainContentsDefault\n\
-. {\n\
-\_   import homenet-dns-default\n\
+
+    # (homenet-dns-default)
+    :local varDefaultContents "\
+(homenet-dns-default) {\n\
+\_   . {\n\
+\_       view DNSSEC {\n\
+\_           expr type() == 'DS'\n\
+\_       }\n\
+\_       errors\n\
+\_       import homenet-dns-forward\n\
+\_       import homenet-dns-catchall\n\
+\_   }\n\
+\n\
+\_   . {\n\
+\_       errors\n\
+\_       import homenet-dns-cache\n\
+\_       import homenet-dns-dnssd\n\
+\_       import homenet-dns-extra\n\
+\_       import homenet-dns-header\n\
+\_       import homenet-dns-auto\n\
+\_       import homenet-dns-forward\n\
+\_       import homenet-dns-catchall\n\
+\_   }
 }"
+
+    # Prepare Corefile
+    :local varMainPath "$cfgNSRoot/Corefile"
+    :local varMainContents "$varCacheContents\n$varDNSSDContents\n$varExtraContents\n$varAutoContents\n$varForwardContents\n$varHeaderContents\n$varCatchAllContents\n$varDefaultContents\n"
+    :if ([:typeof $cfgCorefileOverride] = "nothing") do={
+        :set varMainContents ($varMainContents . "\nimport homenet-dns-default\n")
     } else={
-        :set varMainContents ("$varMainContentsDefault\n" . [:tostr $cfgCorefileOverride])
+        :set varMainContents ($varMainContents . [:tostr $cfgCorefileOverride])
     }
     :local varMainOldHash ($varOldState->"Corefile"->"hash")
     :local varMainNewHash [:convert $varMainContents transform=md5]
@@ -1156,7 +1188,6 @@ $varMainContentsDefault\n\
         ($HomenetDNS->"RemoveFile") ($PvarFile->"name")
     }
 
-    ($HomenetDNS->"RemoveFile") ("$cfgNSRoot/Corefile.dns-sd")
     ($HomenetDNS->"RemoveFile") ("$cfgNSRoot/state.json")
 }
 
@@ -1319,7 +1350,7 @@ $varMainContentsDefault\n\
         :set ($varConfig->"ip6NetworksExtra") [($HomenetDNS->"MakeDefaultIP6NetworksExtra") $varConfig]
     }
 
-    :local cfgUseDNSForwarderDefault [/ip/dns/get allow-remote-requests]
+    :local cfgUseDNSForwarderDefault false
     :local cfgUseDNSForwarder ($HomenetDNSConfig->"useDNSForwarder")
     :if ([:typeof $cfgUseDNSForwarder] = "nothing") do={
         :set cfgUseDNSForwarder $cfgUseDNSForwarderDefault
@@ -1327,6 +1358,13 @@ $varMainContentsDefault\n\
         :set cfgUseDNSForwarder [:tobool $cfgUseDNSForwarder]
     }
     :set ($varConfig->"useDNSForwarder" $cfgUseDNSForwarder)
+
+    :local cfgUseForwardDefault ({"tls://[2606:4700:4700::1002]%one.one.one.one"})
+    :local cfgUseForward ($HomenetDNSConfig->"useForward")
+    :if ([:len $cfgUseForward] = 0) do={
+        :set cfgUseForward $cfgUseForwardDefault
+    }
+    :set ($varConfig->"useForward") $cfgUseForward
 
     :local cfgUseZeroDowntimeDefault true
     :local cfgUseZeroDowntime ($HomenetDNSConfig->"useZeroDowntime")
@@ -1338,6 +1376,7 @@ $varMainContentsDefault\n\
     :set ($varConfig->"useZeroDowntime") $cfgUseZeroDowntime
 
     :set ($varConfig->"corefileExtra") [:tostr ($HomenetDNSConfig->"corefileExtra")]
+    :set ($varConfig->"cacheOverride") [:tostr ($HomenetDNSConfig->"cacheOverride")]
     :set ($varConfig->"corefileOverride") ($HomenetDNSConfig->"corefileOverride")
 
     :set ($varState->"varConfig") $varConfig
