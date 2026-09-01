@@ -1215,10 +1215,10 @@ $cfgCorefileExtra\n\
     }
     :set ($varConfig->"managedID") $cfgManagedID
 
+    :local cfgNSContainerDefault "homenet-dns"
     :local cfgNSContainer ($HomenetDNSConfig->"nsContainer")
     :if ([:len $cfgNSContainer] = 0) do={
-        $LogPrint error $varJobName ("nsContainer must not be empty")
-        :error false
+        :set cfgNSContainer $cfgNSContainerDefault
     }
     :set ($varConfig->"nsContainer") $cfgNSContainer
 
